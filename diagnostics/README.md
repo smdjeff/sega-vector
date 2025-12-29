@@ -114,9 +114,6 @@ export ZCCCFG=/Users/jmathews/Desktop/z88dk/lib/config
 make
 ```
 
-![screenshot](dump/sega.png)
-![screenshot](dump/klingon.gif)
-
 # Stand alone sound board testing
 
 The Sega Universal Serial Board consists of:
