@@ -33,5 +33,6 @@ python3 ./svg2sega.py
 ```
 
 ![screenshot](sega.png)
+![screebshot](klingon.gif)
 ![screenshot](sega80boardset.jpg)
 
