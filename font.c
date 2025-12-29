@@ -1,10 +1,7 @@
 ////////////////////////////////////
 #include "sega.h"
 
-
-
 const uint8_t font_data_alpha[] = {
-
      0x54, 0x25, 0x73, 0x01,  0x55, 0x18, 0x00, 0x00,  0x55, 0x1c, 0x00, 0x03,
      0x55, 0x18, 0x01, 0x02,  0x54, 0x0c, 0x01, 0x00,  0xd5, 0x1c, 0x00, 0x01, // 'a'
 
@@ -83,12 +80,9 @@ const uint8_t font_data_alpha[] = {
 
      0x54, 0x25, 0x73, 0x01,  0x55, 0x1c, 0x00, 0x03,  0x55, 0x25, 0x8d, 0x00,
      0xd5, 0x1c, 0x01, 0x03,                                                   // 'z'
-
 };
 
-
 const uint8_t font_data_numeric[] = {
-
      0x54, 0x25, 0x73, 0x01,  0x55, 0x18, 0x00, 0x00,  0x55, 0x1c, 0x00, 0x03,
      0x55, 0x18, 0x01, 0x02,  0xd5, 0x1c, 0x00, 0x01,                          // '0'
 
@@ -119,45 +113,55 @@ const uint8_t font_data_numeric[] = {
      0x55, 0x0c, 0x02, 0x02,  0xd5, 0x1c, 0x00, 0x01,                          // '9'
 };
 
-
-
 static uint16_t font_addr_alpha = 0;
 static uint16_t font_addr_numeric = 0;
 static uint16_t font_addr_string = 0;
 
-uint16_t installFonts( uint16_t addr ) {
-     font_addr_alpha = addr;
-     memcpy( (uint8_t*)addr, font_data_alpha, sizeof(font_data_alpha) ); 
-     addr += sizeof(font_data_alpha);
+uint16_t installFonts(uint16_t addr) {
+    if (addr == 0) kill(0xE2);
 
-     font_addr_numeric = addr;
-     memcpy( (uint8_t*)addr, font_data_numeric, sizeof(font_data_numeric) );
-     addr += sizeof(font_data_numeric);
+    font_addr_alpha = addr;
+    memcpy((uint8_t*)addr, font_data_alpha, sizeof(font_data_alpha));
+    addr += sizeof(font_data_alpha);
 
-     font_addr_string = addr;
+    font_addr_numeric = addr;
+    memcpy((uint8_t*)addr, font_data_numeric, sizeof(font_data_numeric));
+    addr += sizeof(font_data_numeric);
 
-     return addr;
+    font_addr_string = addr;
+
+    if (font_addr_string == 0) kill(0xE3);
+    return addr;
 }
 
+// offsets into each font blob
+// last element is a sentinel (end address). Do NOT treat it as a glyph
+static const uint16_t font_alpha[] = {
+  0x0000,0x0018,0x0034,0x0044,0x005c,0x0074,0x0088,0x00a0,0x00b8,0x00d0,
+  0x00e0,0x00f8,0x0104,0x0118,0x0128,0x013c,0x0150,0x016c,0x0188,0x01a0,
+  0x01b0,0x01c0,0x01cc,0x01e0,0x01f0,0x0208,0x0208+(4*sizeof(vector_t))
+};
+
+static const uint16_t font_numeric[] = {
+  0x0000,0x0014,0x001C,0x0034,0x004C,0x0060,0x0078,0x008C,0x0098,0x00B4,0x00B4+(5*sizeof(vector_t))
+};
+
 uint16_t fontAddress( char c ) {
-
-   const uint16_t font_alpha[] = {
-      0x0000,0x0018,0x0034,0x0044,0x005c,0x0074,0x0088,0x00a0,0x00b8,0x00d0,
-      0x00e0,0x00f8,0x0104,0x0118,0x0128,0x013c,0x0150,0x016c,0x0188,0x01a0,
-      0x01b0,0x01c0,0x01cc,0x01e0,0x01f0,0x0208,0x0208+(4*sizeof(vector_t))};
-
-   const uint16_t font_numeric[] = {
-      0x0000,0x0014,0x001C,0x0034,0x004C,0x0060,0x0078,0x008C,0x0098,0x00B4,0x00B4+(5*sizeof(vector_t))};
-
-   if ( c>='0' && c<='9'+1 ) return font_addr_numeric + font_numeric[ c-'0' ];
-
-   if ( c>='a' && c<='z'+1 ) return font_addr_alpha + font_alpha[ c-'a' ];
-
+   if ( c>='0' && c<='9'+1 ) return font_addr_numeric + font_numeric[ (uint8_t)(c-'0') ];
+   if ( c>='a' && c<='z'+1 ) return font_addr_alpha   + font_alpha[   (uint8_t)(c-'a') ];
    return 0;
 }
 
 static inline uint16_t fontSize( char c ) {
-   return fontAddress( c + 1 ) - fontAddress( c );
+   if ( c>='0' && c<='9' ) {
+        uint8_t i = (uint8_t)(c-'0');
+        return (uint16_t)(font_numeric[i+1] - font_numeric[i]);
+   }
+   if ( c>='a' && c<='z' ) {
+        uint8_t i = (uint8_t)(c-'a');
+        return (uint16_t)(font_alpha[i+1] - font_alpha[i]);
+   }
+   return 0;
 }
 
 // SEGA_ANGLE(90)
@@ -205,51 +209,88 @@ static uint8_t offset_y( char ch ) {
           case '3': return 0x0c;
           case '8': return 0x0c;
           case '9': return 0x0c;
-
      }
      return 0x00;
 }
 
-void drawString( symbol_t *sym, uint16_t x, uint16_t y, uint8_t scale, uint8_t color, const char *str, uint8_t len ) {
+static inline uint16_t addr16(const void *p) {
+    return (uint16_t)(uintptr_t)p;
+}
+
+static inline void assertEndWithin(uint16_t base, uint16_t limit, uint16_t need, uint8_t code) {
+    uint16_t end = (uint16_t)(base + need);
+    if (end < base) kill(0x80 + code);
+    if (end > limit) kill(code);
+}
+
+static inline void assertAtOrAbove(uint16_t base, uint16_t lower, uint8_t code) {
+    if (base < lower) kill(code);
+}
+
+void drawString( symbol_t *const sym, uint16_t x, uint16_t y, uint8_t scale, uint8_t color, const char *const str, uint8_t len ) {
    uint8_t *vec = (uint8_t*)font_addr_string;
    uint16_t v_sz = 0;
    
+   if (font_addr_string == 0) kill(0xE1);   // or return; but kill is better while debugging
+
    sym->vector_addr = V_ADDR(0); // blank
+   sym->visible = 0;
 
-  for (uint8_t i=0; i<len; i++) {
-      if ( (uint16_t)&vec[v_sz] + len + (sizeof(vector_t)*2) >= VECTOR_RAM_END ) kill( 1 );
-
-      char ch = str[ i ];
-      uint8_t *in = (uint8_t*)fontAddress( ch );
-      if ( in ) {
-           uint16_t sz = fontSize( ch );
-           memcpy( &vec[v_sz], in, sz );
-           v_sz += sz;
-           vec[v_sz - 4] &= ~ SEGA_LAST;
-      }
-
-     uint8_t oy = offset_y( ch );
-     if ( oy ) {
-          vec[v_sz++] = 0x00;
-          vec[v_sz++] = oy;
-          vec[v_sz++] = LSB(SEGA_ANGLE(0));
-          vec[v_sz++] = MSB(SEGA_ANGLE(0));
-     }
-
-     uint8_t ox = offset_x( ch );
-     if ( ox ) {
-          vec[v_sz++] = 0x00;
-          vec[v_sz++] = ox;
-          vec[v_sz++] = LSB(SEGA_ANGLE(90));
-          vec[v_sz++] = MSB(SEGA_ANGLE(90));
-     }
+   if (len == 0 || str == 0) {
+        return;
    }
 
-   if ( (uint16_t)&vec[v_sz-sizeof(vector_t)] < VECTOR_RAM + SYMBOLS_SZ ) kill( 2 );
+   for (uint8_t i=0; i<len; i++) {
+      char ch = str[ i ];
+      uint8_t  oy = offset_y( ch );
+      uint8_t  ox = offset_x( ch );
+      uint16_t glyph_sz = 0;
+      uint8_t *in = (uint8_t*)fontAddress( ch );
+      if ( in ) {
+           glyph_sz = fontSize( ch );
+      }
+      uint16_t need = 0;
+      if (in && glyph_sz) need = (uint16_t)(need + glyph_sz);
+      if (oy)             need = (uint16_t)(need + sizeof(vector_t));
+      if (ox)             need = (uint16_t)(need + sizeof(vector_t));
+
+      assertEndWithin( addr16(&vec[v_sz]), VECTOR_RAM_END, need, 1 );
+
+      if ( in && glyph_sz ) {
+           memcpy( &vec[v_sz], in, glyph_sz );
+           v_sz = (uint16_t)(v_sz + glyph_sz);
+           // clear LAST on the last vector of the glyph (requires at least one vector_t)
+           if (glyph_sz >= sizeof(vector_t)) {
+                vec[v_sz - sizeof(vector_t)] &= (uint8_t)~SEGA_LAST;
+           }
+      }
+
+      if ( oy ) {
+           vec[v_sz++] = 0x00;
+           vec[v_sz++] = oy;
+           vec[v_sz++] = LSB(SEGA_ANGLE(0));
+           vec[v_sz++] = MSB(SEGA_ANGLE(0));
+      }
+
+      if ( ox ) {
+           vec[v_sz++] = 0x00;
+           vec[v_sz++] = ox;
+           vec[v_sz++] = LSB(SEGA_ANGLE(90));
+           vec[v_sz++] = MSB(SEGA_ANGLE(90));
+      }
+   }
+
+   // need at least one vector_t to mark LAST
+   if (v_sz < sizeof(vector_t)) kill( 2 );
+
+   // keep string vectors out of the reserved symbols area
+   assertAtOrAbove( addr16(&vec[v_sz - sizeof(vector_t)]), (uint16_t)(VECTOR_RAM + SYMBOLS_SZ), 3 );
 
    vec[v_sz - sizeof(vector_t)] |= SEGA_LAST;
 
-   colorize( vec, v_sz, color );
+   if ( color ) {
+        colorize( vec, v_sz, color );
+   }
 
    sym->x = x;
    sym->y = y;
@@ -258,14 +299,21 @@ void drawString( symbol_t *sym, uint16_t x, uint16_t y, uint8_t scale, uint8_t c
    sym->visible = 1;
 }
 
+void colorize(uint8_t *const vec, uint16_t len, uint8_t color) {
+    uint16_t base16 = addr16(vec);
 
-void colorize( uint8_t *vec, uint16_t len, uint8_t color ) {
-   for (uint16_t i=0; i<len; i+=sizeof(vector_t)) {
-      if ( (uint16_t)&vec[i] < VECTOR_RAM + SYMBOLS_SZ  ) kill(3);
-      if ( (uint16_t)&vec[i] + len >= VECTOR_RAM_END ) kill(4);
-      vec[i] &= ~0x7E;
-      vec[i] |= (color & 0x7E);
-   }
+    if ((len & (sizeof(vector_t) - 1)) != 0) kill(4);
+    assertAtOrAbove(base16, (uint16_t)(VECTOR_RAM + SYMBOLS_SZ), 5);
+    assertEndWithin(base16, VECTOR_RAM_END, len, 6);
+
+    for (uint16_t i = 0; (uint16_t)(i + sizeof(vector_t)) <= len; i = (uint16_t)(i + sizeof(vector_t))) {
+        uint16_t ai = (uint16_t)(base16 + i);
+
+        assertAtOrAbove(ai, (uint16_t)(VECTOR_RAM + SYMBOLS_SZ), 7);
+        assertEndWithin(ai, VECTOR_RAM_END, (uint16_t)sizeof(vector_t), 8);
+
+        vec[i] &= (uint8_t)~0x7E;
+        vec[i] |= (uint8_t)(color & 0x7E);
+    }
 }
-
 

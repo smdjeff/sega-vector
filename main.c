@@ -572,12 +572,12 @@ static inline void stretch5(uint8_t *p, uint16_t i) {
 
 // the xy ram is not shadowed and the xy board is running asynchonously 
 // from the cpu, so you can't write it without corrupting graphics.
-symbol_t *symbols = (symbol_t*)(VECTOR_RAM); // must be at the top of vector ram
+symbol_t *const symbols = (symbol_t*)(VECTOR_RAM); // must be at the top of vector ram
 
 // the vector table is useful to describe vectors, but since scale, position and rotation
 // are all set in the symbol drawing list that vector table might as well be in rom
 #define VECTOR_RAM_BASE (VECTOR_RAM+SYMBOLS_SZ)
-vector_t *vectors = (vector_t*)(VECTOR_RAM_BASE); // arbitrary location in vector ram
+vector_t *const vectors = (vector_t*)(VECTOR_RAM_BASE); // arbitrary location in vector ram
 
 typedef struct {
    int8_t x_speed;
@@ -598,29 +598,28 @@ static void animate(void) {
    last_tick = system_tick;
 
    for (uint8_t i=0; i<sizeof(symbol)/sizeof(symbol_t); i++) {
-      symbol_t *sym = &symbols[i];
+      symbol_t *const sym = &symbols[i];
       if ( sym->visible ) {
          motion_t *m = &motion[ i ];
          if ( m->slow && ((system_tick & 0x0003) != 0) ) continue;
-         sym->y += m->y_speed;
          sym->rotation = (sym->rotation + m->rotation_speed) & 0x03FF;
          uint8_t last_scale = sym->scale;
          if ( m->resize_speed ) {
             sym->scale += m->resize_speed;
             if ( sym->scale < last_scale ) {
-               sym->visible = 0;
+               sym->visible = false;
             }
          }
          if ( m->x_speed ) {
             sym->x += m->x_speed;
             if ((m->x_speed > 0 && sym->x > MAX_X) || (m->x_speed < 0 && sym->x < MIN_X)) {
-               sym->visible = 0;
+               sym->visible = false;
             }
          }
          if ( m->y_speed ) {
             sym->y += m->y_speed;
             if ((m->y_speed > 0 && sym->y > MAX_Y) || (m->y_speed < 0 && sym->y < MIN_Y)) {
-               sym->visible = 0;
+               sym->visible = false;
             }
          }
       }
@@ -766,7 +765,7 @@ static void timer_interrupt_4Hz(void) {
 }
 
 
-static void colorizeCube( vector_t *vec, uint8_t quad ) {
+static void colorizeCube( vector_t *const vec, uint8_t quad ) {
    switch ( quad ) {
       case 1: // top right
          vec[1].color = SEGA_COLOR_CYAN;
@@ -836,10 +835,17 @@ static inline void resetSymbol( uint8_t sid, uint16_t x, uint16_t y, uint16_t se
 
 static void enableSymbol( uint8_t sid, uint16_t x, uint16_t y, uint16_t sega_angle, uint8_t scale ) {
    resetSymbol( sid, x, y, sega_angle, scale );
-   symbols[sid].visible = 1;
+   symbols[sid].visible = true;
 }
 
-static void moveCubesX( void ) {
+static void moveObjectsX( void ) {
+   symbols[S_BONUS].x -= 1;
+
+   // weird, we didn't have these two, makes game for strategic, but odder having them - 
+   // cause you can evade chopper with movement.
+   symbols[S_CHOPPER].x -= 1;
+   symbols[S_BLADE].x -= 1;
+
    for (uint8_t i=0; i<3; i++) {
       symbols[S_CUBE0+i].x -= 1;
       if ( symbols[S_CUBE0+i].x < 250 ) {
@@ -871,8 +877,8 @@ static void skewCubes( bool reset ) {
    if (ix>2) ix = 0;
 
    const uint16_t vid[] = { V_CUBE0, V_CUBE1, V_CUBE2 };
-   vector_t *vec = &vectors[ vid[ix] ];
-   symbol_t *sym = &symbols[ S_CUBE0 + ix ];
+   vector_t *const vec = &vectors[ vid[ix] ];
+   symbol_t *const sym = &symbols[ S_CUBE0 + ix ];
 
    uint8_t quad = quadrant( sym->x, sym->y );
    if ( quad != last_quad[ ix ] || reset ) {
@@ -1000,6 +1006,8 @@ static bool drawAttract( void ) {
          const char s[] = "game over";
          drawString( &symbols[S_STRING], CENTER_X-155, MIN_Y+40, 0x80, SEGA_COLOR_YELLOW, s, sizeof(s)-1 );
          last_tick = system_tick;
+         // set font 'a' thru 'z' to brightest white for phosphor afterglow
+         colorize( (uint8_t*)fontAddress('a'), fontAddress('z'+1)-fontAddress('a'), SEGA_COLOR_BRWHITE );
          state++;
          break; }
 
@@ -1013,13 +1021,15 @@ static bool drawAttract( void ) {
             drawString( &symbols[S_STRING], CENTER_X-165, MIN_Y+40, 0x80, SEGA_COLOR_GREEN, s, sizeof(s)-1 );
          }
          last_tick = system_tick;
+         // set font 'a' thru 'z' to brightest white for phosphor afterglow
+         colorize( (uint8_t*)fontAddress('a'), fontAddress('z'+1)-fontAddress('a'), SEGA_COLOR_BRWHITE );
          state++;
          break;
 
       case 1: 
       case 3: {
          const char str[] = "attack vektor";
-         symbol_t *sym = &symbols[S_SCORE0];
+         symbol_t *const sym = &symbols[S_SCORE0];
          sym->x = MIN_X-70;
          sym->y = CENTER_Y;
          sym->scale = 0xFF;
@@ -1178,21 +1188,75 @@ static bool drawInitials( void ) {
    return false;
 }
 
-bool drawScore( uint8_t score, bool reset ) {
+void drawScore( uint8_t score, bool reset ) {
+   // unpacked bcd style
+   // fast and no division but can lose track of real value
    static uint8_t last_score = 0;
-   if ( score != last_score || reset ) {
+   static char d0, d1, d2 = 0;
+   if ( reset ) {
+      d0 = d1 = d2 = '0';
+      last_score = ~score;
+   } 
+   if ( score != last_score ) {
       last_score = score;
-      uint8_t d0,d1,d2;
-      digits3( &d0, &d1, &d2, score );
-      uint8_t r = score; // remainder
+      if ( !reset ) {
+         // when parameter changed assume it counted UP by one
+         if (++d2 > '9') {
+            d2 = '0';
+            if (++d1 > '9') {
+               d1 = '0';
+               if (++d0 > '9') {
+                  d0 = '0';
+               }
+            }
+         }
+      }
       symbols[ S_SCORE0 ].vector_addr = fontAddress( d0 );
       symbols[ S_SCORE1 ].vector_addr = fontAddress( d1 );
       symbols[ S_SCORE2 ].vector_addr = fontAddress( d2 );
    }
-   return false;
+   if ( reset ) {
+      symbols[ S_SCORE0 ].visible = true;
+      symbols[ S_SCORE1 ].visible = true;
+      symbols[ S_SCORE2 ].visible = true;
+   }
 }
 
-static void shrapnel( symbol_t * sym ) {
+void drawBonus(uint8_t value, bool reset) {
+  static uint8_t last_value = 0xFF;
+
+  if (reset) last_value = 0xFF;
+
+  if (value != last_value) {
+    last_value = value;
+
+    if (value == 0) {
+      symbols[S_BONUS0].visible = false;
+      symbols[S_BONUS1].visible = false;
+      symbols[S_BONUS2].visible = false;
+      return;
+    }
+
+    symbols[S_BONUS0].visible = true;
+    symbols[S_BONUS1].visible = true;
+    symbols[S_BONUS2].visible = true;
+
+    uint8_t tens = 0;
+    uint8_t ones = value;
+    while (ones >= 10) { ones -= 10; tens++; }
+
+    uint8_t d0 = ' ';
+    uint8_t d1 = '0' + tens;
+    uint8_t d2 = '0' + ones;
+
+    symbols[S_BONUS0].vector_addr = fontAddress(d0);
+    symbols[S_BONUS1].vector_addr = fontAddress(d1);
+    symbols[S_BONUS2].vector_addr = fontAddress(d2);
+  }
+}
+
+
+static void shrapnel( symbol_t *const sym ) {
    for (uint8_t sid=S_EXPLODE2, q=0; sid<=S_EXPLODE7; sid++,q++) {
       uint8_t scale = 0x30 + (q<<4);
       uint8_t velocity = 1 + 30-(q<<1);
@@ -1243,6 +1307,9 @@ static void beginPlay(void) {
 
 
 static bool drawPlay(void) {
+   symbol_t *const chopper = &symbols[S_CHOPPER];
+   symbol_t *const tank = &symbols[S_TANK];
+   symbol_t *const bonus = &symbols[S_BONUS];
 
    uint16_t vec_angle = spinner_vector_angle( false );
    static uint8_t missle_dist = 0;
@@ -1282,10 +1349,10 @@ static bool drawPlay(void) {
 
    drawTank( vec_angle );
 
-   symbol_t *chopper = &symbols[S_CHOPPER];
-   symbol_t *tank = &symbols[S_TANK];
+
    if ( chopper->visible ) {
 
+#ifndef GOD_MODE
       if ( checkColission( chopper, tank ) ) {
          symbols[ S_FLAME ].visible = false;
          symbols[ S_MISSLE0 ].visible = false;
@@ -1295,10 +1362,11 @@ static bool drawPlay(void) {
          SOUND_COMMAND = TANK_EXPLODE;
          return true; // game over
       }
+#endif
 
       for (uint8_t i=0; i<3; i++) {
          uint8_t sym_ix = S_MISSLE0+i;
-         symbol_t *missle = &symbols[sym_ix];
+         symbol_t *const missle = &symbols[sym_ix];
          if ( missle->visible ) {
             if ( checkColission( chopper, missle ) ) {
                score++;
@@ -1327,8 +1395,8 @@ static bool drawPlay(void) {
    // so move the street by changing the invisible offset vector at the
    // begining of the symbol and just leave origin at CENTER screen
 
-   vector_t *vec = &vectors[ V_STREET ];
-   motion_t *m = &motion[ S_TANK ];
+   vector_t *const vec = &vectors[ V_STREET ];
+   motion_t *const m = &motion[ S_TANK ];
    uint16_t angle = symbols[ S_TANK ].rotation;
 
    if ( buttons & BUTTON_THRUST ) {
@@ -1346,7 +1414,7 @@ static bool drawPlay(void) {
             if ( street_y > 0 ) {
                stretch3( &vec[0].size, street_y );
                street_y -= 1;
-               moveCubesY();
+               moveObjectsY();
                skewCubes( false );
             } else {
                setRotationSpeed( S_TANK, SEGA_ANGLE(12) );
@@ -1371,7 +1439,7 @@ static bool drawPlay(void) {
             if ( street_x < (255*5) ) {
                stretch5( &vec[4].size, street_x );
                street_x += 1;
-               moveCubesX();
+               moveObjectsX();
                skewCubes( false );
             } else {
                setRotationSpeed( S_TANK, SEGA_ANGLE(-12) );
@@ -1399,7 +1467,7 @@ static bool drawPlay(void) {
             if ( street_y < (570) ) {
                stretch3( &vec[0].size, street_y );
                street_y += 1;
-               moveCubesY();
+               moveObjectsY();
                skewCubes( false );
             } else {
                // reset
@@ -1442,7 +1510,7 @@ static void beginGameOver(void) {
       drawString( &symbols[S_STRING], CENTER_X-280, MIN_Y, 0xFE, SEGA_COLOR_YELLOW, s, sizeof(s)-1 );
    }
 
-   colorize( (uint8_t*)V_ADDR(V_SMOKE), V_ADDR(V_LAST)-V_ADDR(V_SMOKE), SEGA_COLOR_WHITE );
+   colorize( (uint8_t*)&vectors[V_SMOKE], V_SMOKE_LEN*sizeof(vector_t), SEGA_COLOR_WHITE );
 
    setTrajectory( S_STRING, 5, SEGA_ANGLE(0) );
 
@@ -1507,10 +1575,10 @@ static void drawDiagnosticsIO( void ) {
    }
 }
 
-static void writeVec( vector_t *vec, uint8_t size, uint8_t color, uint8_t last ) {
+static void writeVec( vector_t *const vec, uint8_t size, uint8_t color, bool last ) {
    memset( (uint8_t*)vec, 0x00, sizeof(vector_t) );
    vec->color = color;
-   vec->visible = 1;
+   vec->visible = true;
    vec->last = last;
    vec->size = size;
    vec->angle = 0;
@@ -1531,10 +1599,10 @@ static void beginDiagnosticsGrid( void ) {
    writeVec( &vectors[8], 255, SEGA_COLOR_MAGENTA, 0 );
    writeVec( &vectors[9],  10,  SEGA_COLOR_MAGENTA, 1 );
 
-   symbol_t *sym = symbols;
+   symbol_t * sym = symbols;
    for (uint16_t y=MIN_Y; y<MAX_Y+1; y+=(MAX_Y-MIN_Y)/12) {
-      sym->visible = 1;
-      sym->last = 0;
+      sym->visible = true;
+      sym->last = false;
       sym->x = MIN_X;
       sym->y = y;
       sym->vector_addr = (uint16_t)&vectors[0];
@@ -1544,8 +1612,8 @@ static void beginDiagnosticsGrid( void ) {
    }
 
    for (uint16_t x=MIN_X; x<MAX_X+1; x+=(MAX_X-MIN_X)/15) {
-      sym->visible = 1;
-      sym->last = 0;
+      sym->visible = true;
+      sym->last = false;
       sym->x = x;
       sym->y = MIN_Y;
       sym->vector_addr = (uint16_t)&vectors[4];
@@ -1554,7 +1622,7 @@ static void beginDiagnosticsGrid( void ) {
       sym++;
    }
 
-   (sym-1)->last = 1;
+   (sym-1)->last = true;
 }
 
 static void drawDiagnosticsGrid( void ) {

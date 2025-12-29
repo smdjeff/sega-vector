@@ -56,7 +56,7 @@
 #define VECTOR_RAM      (0xE000) // 4k ram (xy board)
 #define VECTOR_RAM_SZ   (4*1024)
 #define VECTOR_RAM_END  (VECTOR_RAM+VECTOR_RAM_SZ)
-#define SYMBOLS_SZ      (0x160)
+#define SYMBOLS_SZ      (0x180)
 ////////////////////////////////////
 
 // Test button on CPU board asserts NMI
@@ -208,6 +208,9 @@ typedef struct {
 
 // L R R G G B B D
 #define SEGA_VISIBLE       (0x01)
+// it appears that SEGA_LAST cannot be used alone
+// in the symbol table it must be combined with i.e. SEGA_VISIBLE|SEGA_LAST
+// and in the vector table it must be combined with a non-zero color i.e. SEGA_COLOR_GRAY|SEGA_LAST
 #define SEGA_LAST          (0x80)
 #define SEGA_CLEAR         (0)
 #define SEGA_COLOR_RED     (0x60|SEGA_VISIBLE)
@@ -242,6 +245,8 @@ typedef struct {
 #define TANK_FIRE    0x1A
 #define TANK_EXPLODE 0x16
 #define COIN_DROP    0x24
+#define BONUS_START  0x25
+#define BONUS_EXPIRE 0x10
 
 
 typedef enum {
@@ -332,9 +337,10 @@ typedef enum {
 #define FONT_STRING 0x01
 uint16_t installFonts( uint16_t addr );
 uint16_t fontAddress( char c );
-void drawString( symbol_t *sym, uint16_t x, uint16_t y, uint8_t scale, uint8_t color, const char *str, uint8_t len );
-void colorize( uint8_t *vector, uint16_t len, uint8_t color );
-bool drawScore( uint8_t score, bool reset );
+void drawString( symbol_t *const sym, uint16_t x, uint16_t y, uint8_t scale, uint8_t color, const char *const str, uint8_t len );
+void drawScore( uint8_t score, bool reset );
+void colorize( uint8_t *const vector, uint16_t len, uint8_t color );
+
 
 ////////////////////////////////////
 // math.h
@@ -395,6 +401,7 @@ uint16_t xyToVector(uint16_t x, uint16_t y);
 
    #define kill(x) \
       do { \
+        writeDebug(0xFF,x); \
         uint8_t *halt = (uint8_t*)(0x0000); \
         *halt = x; \
       } while(0)
