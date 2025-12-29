@@ -19,7 +19,7 @@ clean:
 # then romulator can be quickly loaded to a single large rom on the ROM board
 
 CFLAGS = -DENABLE_BOOTROM
-#CFLAGS += -DMAME_BUILD
+CFLAGS += -DMAME_BUILD
 
 MAME = /Users/jmathews/Downloads/mame-master/mamed
 
