@@ -4,7 +4,7 @@ import argparse
 import struct
 import turtle
 import canvasvg
-import os,sys,time
+import os,sys,time, io, re, math
 from collections import namedtuple
 
 def hex_int(x):
@@ -19,8 +19,13 @@ parser.add_argument('filename')
 parser.add_argument('-r', '--render', type=hex_int, help='render vector symbol at address')
 parser.add_argument('-w', '--write', action='store_true', help='write vector symbols to disk as svg')
 parser.add_argument('-s', '--search', nargs='?', const=3, type=int, help='search ROM for symbols of at least x vectors')
+parser.add_argument(      '--speed', type=int, default=10, help='0=fast, 10=slow')
+parser.add_argument(      '--rotate', nargs='?', default=90, const=0, type=int, help='rotate 90 degrees, typical for sega roms')
+parser.add_argument('-t', '--text', action='store_true',
+                    help='treat input as text/C header; extract 0xNN bytes instead of reading raw binary')
 parser.add_argument('-d', '--debug', action='store_true', help='print debug information')
 args = parser.parse_args()
+
 
 
 def decodeSegaVector( addr ):
@@ -136,38 +141,82 @@ def drawVector( visible, color, length ):
 
 
 
-def drawSegaSymbol( vectors, speed ):
-    if ( not speed ):
-        skk.reset()
-        skk.pensize(2)
-        skk.speed( speed )
-        wn.tracer(0,0)
+def drawSegaSymbol(vectors, speed):
+    minx, miny, maxx, maxy = compute_bbox(vectors)
+    pad = 20
+    if maxx - minx < 1: maxx += 1
+    if maxy - miny < 1: maxy += 1
+    wn.setworldcoordinates(minx - pad, miny - pad, maxx + pad, maxy + pad)
+
+    skk.reset()
+    skk.pensize(2)
+    skk.speed( 0 if speed == 0 else speed )
+    skk.hideturtle()
+    skk.setundobuffer(None)
+    skk.penup()
+    skk.goto(0, 0)
+    skk.pendown()
+
+    if (speed == 0):
+        wn.tracer(0, 0)
+        update_every = 0
     else:
-        skk.penup()
-        skk.goto(0,0)
-        skk.pendown()
+        wn.tracer(0, 0)
+        update_every = max(1, 200 // max(1, speed))
 
     skk.color('gray')
     skk.dot(8)
 
     ix = 0
     for v in vectors:
-        skk.setheading( (90 - v.angle) )
-        drawVector( v.visible, v.color, v.length/2.0 )
-        skk.write(f"{ix}")
+        skk.setheading( float(args.rotate) - v.angle)
+        drawVector(v.visible, v.color, v.length/2.0)
+        if (args.debug):
+            skk.write(f"{ix}")
         ix += 1
-        drawVector( v.visible, v.color, v.length/2.0 )
-        wn.update()
-        time.sleep(0.01)
+        drawVector(v.visible, v.color, v.length/2.0)
+        if (update_every and (ix % update_every == 0)):
+            wn.update()
+
+    wn.update()
 
 
+
+HEX_BYTE_RE = re.compile(r'0x([0-9A-Fa-f]{2})')
+def read_text_as_bytes(path):
+    s = open(path, 'r', encoding='utf-8', errors='replace').read()
+    hex_pairs = HEX_BYTE_RE.findall(s)
+    if not hex_pairs:
+        raise SystemExit(f"No 0xNN byte tokens found in {path}")
+    return bytes(int(h, 16) for h in hex_pairs)
+
+def compute_bbox(vectors):
+    x = y = 0.0
+    minx = maxx = x
+    miny = maxy = y
+
+    for v in vectors:
+        # draw v.length/2 twice => total step = v.length
+        L = float(v.length)
+        theta = math.radians(float(args.rotate) - v.angle)
+        x += math.cos(theta) * L
+        y += math.sin(theta) * L
+        minx = min(minx, x); maxx = max(maxx, x)
+        miny = min(miny, y); maxy = max(maxy, y)
+
+    return minx, miny, maxx, maxy
 
 
 ####################################################
 
 print()
 
-fp = open(args.filename, mode='rb')
+if args.text:
+    data = read_text_as_bytes(args.filename)
+    fp = io.BytesIO(data)
+else:
+    fp = open(args.filename, mode='rb')
+
 fp.seek(0, os.SEEK_END)
 end_of_file = fp.tell()
 fp.seek(0)
@@ -219,16 +268,12 @@ for addr in addrs:
             print(f"{addr:0>4x} {len(vectors)} vectors")
             if len(vectors) > 2:
                 if ( args.write ):
-                    drawSegaSymbol( vectors, 0 )
+                    drawSegaSymbol( vectors, args.speed )
                     canvasvg.saveall( f"dump/{addr:0>4x}.svg", turtle.getcanvas() )
                 if ( args.render ):
-                    drawSegaSymbol( vectors, 10 )
+                    drawSegaSymbol( vectors, args.speed )
         else:
             print(f"{addr:0>4x}  no vector data")
 
 if ( args.render ):
     wn.mainloop()
-
-
-
-
