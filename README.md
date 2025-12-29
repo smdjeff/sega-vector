@@ -1,8 +1,9 @@
-# sega-g80-vector-homebrew
+# Sega G80 Vector Development Kit
 
-## A new game written for a vintage 1982 vector arcade machine
+## New games written for a vintage 1982 vector arcade machine
 
 ![screenshot](screenshot.jpg)
+![screenshot](screenshot2.jpg)
 * Follow the development progress on [YouTube shorts](https://youtube.com/playlist?list=PL5WwuS3ViybqfLWkKmgaT5_N2kVawZYZk)
 * Not emulated, not MAME, no Raspberry Pi, no Teensy, no ESP32, no kidding.
 * Runs as it would have in 1982 on the original Sega G80 boardsets
@@ -25,10 +26,7 @@ make
 * export ZCCCFG=/Users/jmathews/Desktop/z88dk/lib/config
 * ROM Emulator https://github.com/Kris-Sekula/EPROM-EMU-NG/
 
-# Bonus tooling
-Dump the vectors from the factory ROMs
-
-Or create complex vectors in your favorite SVG editor and convert to Sega vector format
+# Convert back and forth from Sega Vectors to Scalable Vector Graphics 
 ```
 python3 ./sega2svg.py
 python3 ./svg2sega.py
