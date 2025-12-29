@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="46px" height="93px" viewBox="0 0 46 93" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
+    <title>missile</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
+        <g id="missile" transform="translate(1.000000, 1.000000)" stroke-width="2">
+            <polygon id="Shape" stroke="#F8E71C" points="29.8578644 22.2524125 29.8578644 58 44 76.3945481 0 76.3945481 14.1421356 58 14.1421356 22.2524125 22 0"></polygon>
+            <polyline id="Shape" stroke="#C00000" transform="translate(22.500000, 83.492068) scale(1, -1) translate(-22.500000, -83.492068) " points="15.3976079 90.9841366 10 86.0298137 18.6873189 84.6617153 22.5 76 26.3126811 84.6617153 35 86.0298137 29.6023921 90.9841366"></polyline>
+        </g>
+    </g>
+</svg>

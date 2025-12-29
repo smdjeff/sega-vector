@@ -18,6 +18,7 @@ static uint8_t high_score[3] = { 20, 15, 1 };
 static char high_name[3][4] = { "jef", "sno", "amy" };
 static game_state_t game_state = game_state_boot;
 static uint8_t sound_track = 0;
+static uint8_t missle_max = 1;
 
 #define CUBE_X0 (MIN_X+40)
 #define CUBE_X1 (MAX_X-70)
@@ -143,7 +144,7 @@ static inline void stretch5(uint8_t *p, uint16_t i) {
 
    const uint8_t vector[] = {
        #define V_BLANK (0)
-       SEGA_CLEAR|SEGA_LAST,            0, LE(SEGA_ANGLE(0)),
+       SEGA_COLOR_GRAY|SEGA_LAST,    0, LE(SEGA_ANGLE(0)),
 
        #define V_LINE  (V_BLANK+1)
        SEGA_CLEAR,                   0x25, LE(SEGA_ANGLE(130)),
@@ -211,28 +212,34 @@ static inline void stretch5(uint8_t *p, uint16_t i) {
      SEGA_COLOR_GREEN|SEGA_LAST,       SIZE(8),   LE(SEGA_ANGLE(90)),  // 15
 
      #define V_BARREL (V_TURRET+16)
-     SEGA_CLEAR,                       SIZE(5),   LE(SEGA_ANGLE(0)),
-     SEGA_CLEAR,                       SIZE(1),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_GREEN1,                SIZE(8),   LE(SEGA_ANGLE(0)),
-     SEGA_COLOR_GREEN,                 SIZE(1),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_GREEN,                 SIZE(1),   LE(SEGA_ANGLE(0)),
-     SEGA_COLOR_GREEN,                 SIZE(4),   LE(SEGA_ANGLE(90)),
-     SEGA_COLOR_GREEN,                 SIZE(1),   LE(SEGA_ANGLE(180)),
-     SEGA_COLOR_GREEN,                 SIZE(1),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_GREEN1|SEGA_LAST,      SIZE(8),   LE(SEGA_ANGLE(180)),
+     SEGA_CLEAR,                       SIZE(5),   LE(SEGA_ANGLE(0)),   // 0
+     SEGA_CLEAR,                       SIZE(1),   LE(SEGA_ANGLE(270)), // 1
+     SEGA_COLOR_GREEN1,                SIZE(8),   LE(SEGA_ANGLE(0)),   // 2
+     SEGA_COLOR_GREEN,                 SIZE(1),   LE(SEGA_ANGLE(270)), // 3
+     SEGA_COLOR_GREEN,                 SIZE(1),   LE(SEGA_ANGLE(0)),   // 4
+     SEGA_COLOR_GREEN,                 SIZE(4),   LE(SEGA_ANGLE(90)),  // 5
+     SEGA_COLOR_GREEN,                 SIZE(1),   LE(SEGA_ANGLE(180)), // 6
+     SEGA_COLOR_GREEN,                 SIZE(1),   LE(SEGA_ANGLE(270)), // 7
+     SEGA_COLOR_GREEN1|SEGA_LAST,      SIZE(8),   LE(SEGA_ANGLE(180)), // 8
+     SEGA_COLOR_GREEN,                 SIZE(2.8), LE(SEGA_ANGLE(315)), // 9
+     SEGA_CLEAR,                       SIZE(2.8), LE(SEGA_ANGLE(0)),   // 10
+     SEGA_COLOR_GREEN,                 SIZE(2.8), LE(SEGA_ANGLE(135)), // 11
+     SEGA_CLEAR,                       SIZE(2.8), LE(SEGA_ANGLE(0)),   // 12
+     SEGA_COLOR_GREEN|SEGA_LAST,       SIZE(2.8), LE(SEGA_ANGLE(315)), // 13
+     #define V_BARREL_LEN 14
 
-     #define V_FLAME (V_BARREL+9)
+     #define V_FLAME (V_BARREL+V_BARREL_LEN)
      SEGA_CLEAR,                       SIZE(14),  LE(SEGA_ANGLE(347)),
-     SEGA_COLOR_ORANGE,                SIZE(3),   LE(SEGA_ANGLE(315)),
-     SEGA_COLOR_ORANGE,                SIZE(2),   LE(SEGA_ANGLE(90)),
-     SEGA_COLOR_ORANGE,                SIZE(2),   LE(SEGA_ANGLE(0)),
-     SEGA_COLOR_ORANGE,                SIZE(2),   LE(SEGA_ANGLE(135)),
-     SEGA_COLOR_ORANGE,                SIZE(4),   LE(SEGA_ANGLE(22)),
-     SEGA_COLOR_ORANGE,                SIZE(4),   LE(SEGA_ANGLE(158)),
-     SEGA_COLOR_ORANGE,                SIZE(2),   LE(SEGA_ANGLE(45)),
-     SEGA_COLOR_ORANGE,                SIZE(2),   LE(SEGA_ANGLE(180)),
-     SEGA_COLOR_ORANGE,                SIZE(2),   LE(SEGA_ANGLE(90)),
-     SEGA_COLOR_ORANGE|SEGA_LAST,      SIZE(3),   LE(SEGA_ANGLE(225)),
+     SEGA_COLOR_WHITE,                 SIZE(3),   LE(SEGA_ANGLE(315)),
+     SEGA_COLOR_WHITE,                 SIZE(2),   LE(SEGA_ANGLE(90)),
+     SEGA_COLOR_WHITE,                 SIZE(2),   LE(SEGA_ANGLE(0)),
+     SEGA_COLOR_WHITE,                 SIZE(2),   LE(SEGA_ANGLE(135)),
+     SEGA_COLOR_WHITE,                 SIZE(4),   LE(SEGA_ANGLE(22)),
+     SEGA_COLOR_WHITE,                 SIZE(4),   LE(SEGA_ANGLE(158)),
+     SEGA_COLOR_WHITE,                 SIZE(2),   LE(SEGA_ANGLE(45)),
+     SEGA_COLOR_WHITE,                 SIZE(2),   LE(SEGA_ANGLE(180)),
+     SEGA_COLOR_WHITE,                 SIZE(2),   LE(SEGA_ANGLE(90)),
+     SEGA_COLOR_WHITE|SEGA_LAST,       SIZE(3),   LE(SEGA_ANGLE(225)),
 
      #define V_MISSILE (V_FLAME+11)
      SEGA_CLEAR,                       SIZE(2),   LE(SEGA_ANGLE(0)),
@@ -244,56 +251,73 @@ static inline void stretch5(uint8_t *p, uint16_t i) {
      SEGA_COLOR_YELLOW,                SIZE(2),   LE(SEGA_ANGLE(0)),
      SEGA_COLOR_YELLOW|SEGA_LAST,      SIZE(1.2), LE(SEGA_ANGLE(22)),
 
-     #define V_BLADE (V_MISSILE+8)
-     SEGA_COLOR_CYAN,                  SIZE(1.3), LE(SEGA_ANGLE(55)),
-     SEGA_COLOR_CYAN,                  SIZE(9),   LE(SEGA_ANGLE(90)),
-     SEGA_COLOR_CYAN,                  SIZE(1),   LE(SEGA_ANGLE(180)),
-     SEGA_COLOR_CYAN,                  SIZE(9),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_CYAN,                  SIZE(2),   LE(SEGA_ANGLE(293)),
-     SEGA_COLOR_CYAN,                  SIZE(9),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_CYAN,                  SIZE(1),   LE(SEGA_ANGLE(180)),
-     SEGA_COLOR_CYAN,                  SIZE(9),   LE(SEGA_ANGLE(90)),
-     SEGA_COLOR_CYAN,                  SIZE(1),   LE(SEGA_ANGLE(68)),
-     SEGA_COLOR_CYAN,                  SIZE(1),   LE(SEGA_ANGLE(158)),
-     SEGA_COLOR_CYAN,                  SIZE(9),   LE(SEGA_ANGLE(180)),
-     SEGA_COLOR_CYAN,                  SIZE(1),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_CYAN,                  SIZE(9),   LE(SEGA_ANGLE(0)),
-     SEGA_COLOR_CYAN,                  SIZE(2),   LE(SEGA_ANGLE(22)),
-     SEGA_COLOR_CYAN,                  SIZE(9),   LE(SEGA_ANGLE(0)),
-     SEGA_COLOR_CYAN,                  SIZE(1),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_CYAN,                  SIZE(9),   LE(SEGA_ANGLE(180)),
-     SEGA_COLOR_CYAN|SEGA_LAST,        SIZE(1),   LE(SEGA_ANGLE(158)),
+     #define V_BONUS (V_MISSILE+8)
+     SEGA_CLEAR,                       SIZE(2),   LE(SEGA_ANGLE(0)),
+     SEGA_COLOR_GREEN,                 SIZE(1.2), LE(SEGA_ANGLE(158)),
+     SEGA_COLOR_GREEN,                 SIZE(2),   LE(SEGA_ANGLE(180)),
+     SEGA_COLOR_GREEN,                 SIZE(1),   LE(SEGA_ANGLE(135)),
+     SEGA_COLOR_GREEN,                 SIZE(2.2), LE(SEGA_ANGLE(270)),
+     SEGA_COLOR_GREEN,                 SIZE(1),   LE(SEGA_ANGLE(45)),
+     SEGA_COLOR_GREEN,                 SIZE(2),   LE(SEGA_ANGLE(0)),
+     SEGA_COLOR_GREEN,                 SIZE(1.2), LE(SEGA_ANGLE(22)),
+     SEGA_CLEAR,                       SIZE(3.5), LE(SEGA_ANGLE(135)),
+     0x54, 0x18, 0x00, 0x02,
+     0x55, 0x1c, 0x00, 0x01,
+     0x55, 0x18, 0x01, 0x00,
+     0x55, 0x1c, 0x01, 0x03,
+     0x54, 0x0c, 0x02, 0x02,
+     0xd5, 0x1c, 0x01, 0x01,
+
+     #define V_BLADE (V_BONUS+15)
+     SEGA_COLOR_YELLOW,                  SIZE(1.3), LE(SEGA_ANGLE(55)),
+     SEGA_COLOR_YELLOW,                  SIZE(9),   LE(SEGA_ANGLE(90)),
+     SEGA_COLOR_YELLOW,                  SIZE(1),   LE(SEGA_ANGLE(180)),
+     SEGA_COLOR_YELLOW,                  SIZE(9),   LE(SEGA_ANGLE(270)),
+     SEGA_COLOR_YELLOW,                  SIZE(2),   LE(SEGA_ANGLE(293)),
+     SEGA_COLOR_YELLOW,                  SIZE(9),   LE(SEGA_ANGLE(270)),
+     SEGA_COLOR_YELLOW,                  SIZE(1),   LE(SEGA_ANGLE(180)),
+     SEGA_COLOR_YELLOW,                  SIZE(9),   LE(SEGA_ANGLE(90)),
+     SEGA_COLOR_YELLOW,                  SIZE(1),   LE(SEGA_ANGLE(68)),
+     SEGA_COLOR_YELLOW,                  SIZE(1),   LE(SEGA_ANGLE(158)),
+     SEGA_COLOR_YELLOW,                  SIZE(9),   LE(SEGA_ANGLE(180)),
+     SEGA_COLOR_YELLOW,                  SIZE(1),   LE(SEGA_ANGLE(270)),
+     SEGA_COLOR_YELLOW,                  SIZE(9),   LE(SEGA_ANGLE(0)),
+     SEGA_COLOR_YELLOW,                  SIZE(2),   LE(SEGA_ANGLE(22)),
+     SEGA_COLOR_YELLOW,                  SIZE(9),   LE(SEGA_ANGLE(0)),
+     SEGA_COLOR_YELLOW,                  SIZE(1),   LE(SEGA_ANGLE(270)),
+     SEGA_COLOR_YELLOW,                  SIZE(9),   LE(SEGA_ANGLE(180)),
+     SEGA_COLOR_YELLOW|SEGA_LAST,        SIZE(1),   LE(SEGA_ANGLE(158)),
 
      #define V_CHOPPER (V_BLADE+18)
      SEGA_CLEAR,                       SIZE(2.6), LE(SEGA_ANGLE(330)),
-     SEGA_COLOR_CYAN,                  SIZE(2),   LE(SEGA_ANGLE(0)),
-     SEGA_COLOR_CYAN,                  SIZE(2),   LE(SEGA_ANGLE(90)),
-     SEGA_COLOR_CYAN,                  SIZE(2),   LE(SEGA_ANGLE(158)),
-     SEGA_COLOR_CYAN,                  SIZE(5),   LE(SEGA_ANGLE(90)),
-     SEGA_COLOR_CYAN,                  SIZE(3),   LE(SEGA_ANGLE(180)),
-     SEGA_COLOR_CYAN,                  SIZE(6),   LE(SEGA_ANGLE(90)),
-     SEGA_COLOR_CYAN,                  SIZE(4),   LE(SEGA_ANGLE(0)),
-     SEGA_COLOR_CYAN,                  SIZE(1),   LE(SEGA_ANGLE(90)),
-     SEGA_COLOR_CYAN,                  SIZE(7),   LE(SEGA_ANGLE(180)),
-     SEGA_COLOR_CYAN,                  SIZE(1),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_CYAN,                  SIZE(4),   LE(SEGA_ANGLE(0)),
-     SEGA_COLOR_CYAN,                  SIZE(6),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_CYAN,                  SIZE(3),   LE(SEGA_ANGLE(180)),
-     SEGA_COLOR_CYAN,                  SIZE(5),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_CYAN,                  SIZE(2),   LE(SEGA_ANGLE(203)),
-     SEGA_COLOR_CYAN,                  SIZE(2),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_CYAN,                  SIZE(6.7), LE(SEGA_ANGLE(0)),
-     SEGA_COLOR_CYAN,                  SIZE(2),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_CYAN,                  SIZE(4),   LE(SEGA_ANGLE(180)),
-     SEGA_COLOR_CYAN,                  SIZE(3),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_CYAN,                  SIZE(2),   LE(SEGA_ANGLE(0)),
-     SEGA_COLOR_CYAN,                  SIZE(1),   LE(SEGA_ANGLE(270)),
-     SEGA_COLOR_CYAN,                  SIZE(1),   LE(SEGA_ANGLE(180)),
-     SEGA_COLOR_CYAN,                  SIZE(1),   LE(SEGA_ANGLE(90)),
-     SEGA_COLOR_CYAN,                  SIZE(2),   LE(SEGA_ANGLE(0)),
-     SEGA_COLOR_CYAN,                  SIZE(3),   LE(SEGA_ANGLE(90)),
-     SEGA_COLOR_CYAN,                  SIZE(4),   LE(SEGA_ANGLE(180)),
-     SEGA_COLOR_CYAN|SEGA_LAST,        SIZE(2),   LE(SEGA_ANGLE(90)),
+     SEGA_COLOR_ORANGE,                  SIZE(2),   LE(SEGA_ANGLE(0)),
+     SEGA_COLOR_ORANGE,                  SIZE(2),   LE(SEGA_ANGLE(90)),
+     SEGA_COLOR_ORANGE,                  SIZE(2),   LE(SEGA_ANGLE(158)),
+     SEGA_COLOR_ORANGE,                  SIZE(5),   LE(SEGA_ANGLE(90)),
+     SEGA_COLOR_ORANGE,                  SIZE(3),   LE(SEGA_ANGLE(180)),
+     SEGA_COLOR_ORANGE,                  SIZE(6),   LE(SEGA_ANGLE(90)),
+     SEGA_COLOR_ORANGE,                  SIZE(4),   LE(SEGA_ANGLE(0)),
+     SEGA_COLOR_ORANGE,                  SIZE(1),   LE(SEGA_ANGLE(90)),
+     SEGA_COLOR_ORANGE,                  SIZE(7),   LE(SEGA_ANGLE(180)),
+     SEGA_COLOR_ORANGE,                  SIZE(1),   LE(SEGA_ANGLE(270)),
+     SEGA_COLOR_ORANGE,                  SIZE(4),   LE(SEGA_ANGLE(0)),
+     SEGA_COLOR_ORANGE,                  SIZE(6),   LE(SEGA_ANGLE(270)),
+     SEGA_COLOR_ORANGE,                  SIZE(3),   LE(SEGA_ANGLE(180)),
+     SEGA_COLOR_ORANGE,                  SIZE(5),   LE(SEGA_ANGLE(270)),
+     SEGA_COLOR_ORANGE,                  SIZE(2),   LE(SEGA_ANGLE(203)),
+     SEGA_COLOR_ORANGE,                  SIZE(2),   LE(SEGA_ANGLE(270)),
+     SEGA_COLOR_ORANGE,                  SIZE(6.7), LE(SEGA_ANGLE(0)),
+     SEGA_COLOR_ORANGE,                  SIZE(2),   LE(SEGA_ANGLE(270)),
+     SEGA_COLOR_ORANGE,                  SIZE(4),   LE(SEGA_ANGLE(180)),
+     SEGA_COLOR_ORANGE,                  SIZE(3),   LE(SEGA_ANGLE(270)),
+     SEGA_COLOR_ORANGE,                  SIZE(2),   LE(SEGA_ANGLE(0)),
+     SEGA_COLOR_ORANGE,                  SIZE(1),   LE(SEGA_ANGLE(270)),
+     SEGA_COLOR_ORANGE,                  SIZE(1),   LE(SEGA_ANGLE(180)),
+     SEGA_COLOR_ORANGE,                  SIZE(1),   LE(SEGA_ANGLE(90)),
+     SEGA_COLOR_ORANGE,                  SIZE(2),   LE(SEGA_ANGLE(0)),
+     SEGA_COLOR_ORANGE,                  SIZE(3),   LE(SEGA_ANGLE(90)),
+     SEGA_COLOR_ORANGE,                  SIZE(4),   LE(SEGA_ANGLE(180)),
+     SEGA_COLOR_ORANGE|SEGA_LAST,        SIZE(2),   LE(SEGA_ANGLE(90)),
 
      #define V_CUBE0 (V_CHOPPER+29)
      SEGA_CLEAR,                       SIZE(5.6), LE(SEGA_ANGLE(315)), // 0  beam wait
@@ -478,9 +502,9 @@ static inline void stretch5(uint8_t *p, uint16_t i) {
       0x2B, 0x15, 0x9c, 0x03,
       0x2B, 0x16, 0xee, 0x03,
       0x2B, 0x0d, 0x3b, 0x00,
-      0x2B, 0x0d, 0x77, 0x00,
-      0x80, 0x00, 0x00, 0x00
-     #define V_LAST (V_SMOKE+39)
+      0xAB, 0x0d, 0x77, 0x00,
+     #define V_SMOKE_LEN 38
+     #define V_LAST (V_SMOKE+V_SMOKE_LEN)
 
     };
 
@@ -536,35 +560,45 @@ static inline void stretch5(uint8_t *p, uint16_t i) {
       #define S_CUBE2    20
       0, LE(CUBE_X0), LE(CUBE_Y2), LE(V_ADDR(V_CUBE2)), LE(0),    0xe0,
 
-      #define S_STREET   21
+      #define S_BONUS    21
+      0, LE(1024), LE(CUBE_Y2), LE(V_ADDR(V_BONUS)), LE(SEGA_ANGLE(0)),   0x30,
+
+      #define S_STREET   22
       0,  LE(1024), LE(1024), LE(V_ADDR(V_STREET)), LE(0),    0x80,
 
-      #define S_EXPLODE0 22
+      #define S_EXPLODE0 23
       0,             LE(1024), LE(1024), LE(V_ADDR(V_EXPLODE0)), LE(SEGA_ANGLE(0)),   0x40,
-      #define S_EXPLODE1 23
+      #define S_EXPLODE1 24
       0,             LE(1024), LE(1024), LE(V_ADDR(V_EXPLODE0)), LE(SEGA_ANGLE(45)),   0x20,
 
-      #define S_EXPLODE2 24
+      #define S_EXPLODE2 25
       0,             LE(1024), LE(1024), LE(V_ADDR(V_EXPLODE1)), LE(SEGA_ANGLE(0)),   0x40,
-      #define S_EXPLODE3 25
+      #define S_EXPLODE3 26
       0,             LE(1024), LE(1024), LE(V_ADDR(V_EXPLODE1)), LE(SEGA_ANGLE(11)),   0x40,
-      #define S_EXPLODE4 26
+      #define S_EXPLODE4 27
       0,             LE(1024), LE(1024), LE(V_ADDR(V_EXPLODE1)), LE(SEGA_ANGLE(22)),   0x40,
-      #define S_EXPLODE5 27
+      #define S_EXPLODE5 28
       0,             LE(1024), LE(1024), LE(V_ADDR(V_EXPLODE1)), LE(SEGA_ANGLE(33)),   0x40,
-      #define S_EXPLODE6 28
+      #define S_EXPLODE6 29
       0,             LE(1024), LE(1024), LE(V_ADDR(V_EXPLODE1)), LE(SEGA_ANGLE(44)),   0x40,
-      #define S_EXPLODE7 29
+      #define S_EXPLODE7 30
       0,             LE(1024), LE(1024), LE(V_ADDR(V_EXPLODE1)), LE(SEGA_ANGLE(55)),   0x40,
 
-      #define S_SMOKE0   30
+      #define S_SMOKE0   31
       0,             LE(1024), LE(1024), LE(V_ADDR(V_SMOKE)), LE(SEGA_ANGLE(0)),   0x40,
-      #define S_SMOKE1   31
+      #define S_SMOKE1   32
       0,             LE(1024), LE(1024), LE(V_ADDR(V_SMOKE)), LE(SEGA_ANGLE(0)),   0x40,
-      #define S_SMOKE2   32
+      #define S_SMOKE2   33
       0,             LE(1024), LE(1024), LE(V_ADDR(V_SMOKE)), LE(SEGA_ANGLE(0)),   0x40,
 
-      #define S_LAST  32
+      #define S_BONUS0    34
+      0,            LE(1024), LE(1024), LE(V_ADDR(V_BLANK)),     LE(0),               0x80,
+      #define S_BONUS1    35
+      0,            LE(1024), LE(1024), LE(V_ADDR(V_BLANK)),     LE(0),               0x80,
+      #define S_BONUS2    36
+      0,            LE(1024), LE(1024), LE(V_ADDR(V_BLANK)),     LE(0),               0x80,
+
+      #define S_LAST  36
       SEGA_VISIBLE|SEGA_LAST, LE(1024), LE(1024), LE(V_ADDR(V_BLANK)), LE(0), 0x80,
    };
    
@@ -854,7 +888,8 @@ static void moveObjectsX( void ) {
    }
 }
 
-static void moveCubesY( void ) {
+static void moveObjectsY( void ) {
+   symbols[S_BONUS].y -= 1;
    symbols[S_CHOPPER].y -= 1;
    symbols[S_BLADE].y -= 1;
    for (uint8_t i=0; i<3; i++) {
@@ -947,9 +982,6 @@ static void resetVectors( void ) {
 static void beginAttract( void ) {
    resetVectors();
 
-   // set font 'a' thru 'z' to brightest white for phosphor afterglow
-   colorize( (uint8_t*)fontAddress('a'), fontAddress('z'+1)-fontAddress('a'), SEGA_COLOR_BRWHITE );
-
    // disable all other symbols on screen
    // interestingly, hardware ignores last flag if it's not also visible
    symbols[S_STRING].flags = SEGA_VISIBLE|SEGA_LAST;
@@ -966,6 +998,7 @@ static void endAttract( void ) {
    symbols[ S_CUBE0 ].visible = true;
    symbols[ S_CUBE1 ].visible = true;
    symbols[ S_CUBE2 ].visible = true;
+   symbols[ S_BONUS ].visible = true;
    symbols[ S_STREET ].visible = true;
 
    // set font 'a' thru 'z' to regular white
@@ -1064,7 +1097,9 @@ static bool drawAttract( void ) {
          char s[7] = {0,};
          memcpy( &s[0], high_name[state_ix], 3 );
          digits3( &s[4], &s[5], &s[6], high_score[state_ix] );
-         drawString( &symbols[S_STRING], 0, state_iy, 0xA0, SEGA_COLOR_CYAN, s, sizeof(s) );
+         colorize( (uint8_t*)fontAddress('a'), fontAddress('z'+1)-fontAddress('a'), SEGA_COLOR_CYAN );
+         colorize( (uint8_t*)fontAddress('0'), fontAddress('9'+1)-fontAddress('0'), SEGA_COLOR_WHITE );
+         drawString( &symbols[S_STRING], 0, state_iy, 0xA0, 0, s, sizeof(s) );
          setTrajectory( S_STRING, 20, SEGA_ANGLE(90) );
          state_ix--;
          state_iy += 250;
@@ -1266,7 +1301,7 @@ static void shrapnel( symbol_t *const sym ) {
    }
 }
 
-static void explode( symbol_t * sym ) {
+static void explode( symbol_t *const sym ) {
    setRotationSpeed( S_EXPLODE0, SEGA_ANGLE(12) );
    setResizeSpeed( S_EXPLODE0, 25 );
    enableSymbol( S_EXPLODE0, sym->x, sym->y, SEGA_ANGLE(0), 0x30 );
@@ -1275,7 +1310,7 @@ static void explode( symbol_t * sym ) {
    enableSymbol( S_EXPLODE1, sym->x, sym->y, SEGA_ANGLE(0), 0x10 );
 }
 
-static inline bool checkColission( symbol_t *s0, symbol_t *s1 ) {
+static inline bool checkColission( symbol_t *const s0, symbol_t *const s1 ) {
    uint16_t x0 = s0->x-(HITBOX_SZ/2);
    uint16_t x1 = s0->x+(HITBOX_SZ/2);
    uint16_t y0 = s0->y-(HITBOX_SZ/2);
@@ -1288,16 +1323,23 @@ static uint8_t street_state;
 static int16_t street_y;
 static int16_t street_x;
 static uint16_t chopper_timer;
+static uint8_t bonus_count;
 
 static void beginPlay(void) {
    street_state = 0;
    street_y = (200+(255*2));
    street_x = 0;
    chopper_timer = system_tick;
+   bonus_count = 0;
    score = 0;
-   enableSymbol( S_SCORE0, CENTER_X-40, MIN_Y+10, SEGA_ANGLE(0), 0x80 );
-   enableSymbol( S_SCORE1, CENTER_X,    MIN_Y+10, SEGA_ANGLE(0), 0x80 );
-   enableSymbol( S_SCORE2, CENTER_X+40, MIN_Y+10, SEGA_ANGLE(0), 0x80 );
+   missle_max = 1;
+   vectors[ V_BARREL + 8 ].last = true;
+   resetSymbol( S_SCORE0, CENTER_X-40, MIN_Y+10, SEGA_ANGLE(0), 0x80 );
+   resetSymbol( S_SCORE1, CENTER_X,    MIN_Y+10, SEGA_ANGLE(0), 0x80 );
+   resetSymbol( S_SCORE2, CENTER_X+40, MIN_Y+10, SEGA_ANGLE(0), 0x80 );
+   resetSymbol( S_BONUS0, CENTER_X-20, MAX_Y-10, SEGA_ANGLE(0), 0x40 );
+   resetSymbol( S_BONUS1, CENTER_X,    MAX_Y-10, SEGA_ANGLE(0), 0x40 );
+   resetSymbol( S_BONUS2, CENTER_X+20, MAX_Y-10, SEGA_ANGLE(0), 0x40 );
    drawScore(score, true);
    spinner_vector_angle( true );
    skewCubes(true);
@@ -1319,9 +1361,9 @@ static bool drawPlay(void) {
    static uint8_t ct=0;
    if ( ct == 0 ) {
       if ( buttons & BUTTON_FIRE ) {
-         for (uint8_t i=0; i<3; i++) {
+         for (uint8_t i=0; i<missle_max; i++) {
             uint8_t sym_ix = S_MISSLE0+i;
-            symbol_t *missle = &symbols[sym_ix];
+            symbol_t *const missle = &symbols[sym_ix];
             if ( !missle->visible ) {
                int16_t x=0, y=0;
                vectorToXY( vec_angle, 80, &x, &y ); // offset to barrel's tip
@@ -1330,6 +1372,15 @@ static bool drawPlay(void) {
                ct = 30;
                SOUND_COMMAND = TANK_FIRE;
                symbols[ S_FLAME ].visible = true;
+               if (bonus_count) {
+                  bonus_count--;
+                  drawBonus( bonus_count, false );
+                  if ( bonus_count == 0 ) {
+                     bonus->visible = true;
+                     missle_max = 1;
+                     vectors[ V_BARREL + 8 ].last = true; // disable triple stripe barrel
+                  }
+               }
                break;
             }
          }
@@ -1387,6 +1438,17 @@ static bool drawPlay(void) {
          startChopper();
       }
 
+   }
+
+   if ( bonus->visible ) {
+      if ( checkColission( bonus, tank ) ) {
+         bonus->visible = false;
+         SOUND_COMMAND = BONUS_START;
+         missle_max = 3;
+         vectors[ V_BARREL + 8 ].last = false; // triple stripe barrel
+         bonus_count = 30;
+         drawBonus(bonus_count, true);
+      }
    }
 
 
