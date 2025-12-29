@@ -23,8 +23,6 @@ parser.add_argument('-s', '--scale', nargs='?', const=1.0, type=float, default=1
 parser.add_argument('-d', '--debug', action='store_true', help='print debug information')
 parser.add_argument('--no-retrace', action='store_true',
                     help='disable dashed gray retrace overlay (default: enabled)')
-parser.add_argument('--no-flip', action='store_true',
-                    help='disable turtle coordinates match SVG orientation')
 parser.add_argument('--no-opt', action='store_true',
                     help='disable stroke ordering optimization to reduce beam moves')
 parser.add_argument('--merge', nargs='?', const=1.0, type=float, default=0.0,
@@ -485,15 +483,13 @@ else:
     cx = (minx + maxx) / 2.0
     cy = (miny + maxy) / 2.0
 
-# PASS 2: center (and optional flip) into final strokes
+# PASS 2: center into final strokes
 strokes = []
 for st in raw_strokes:
     pts = []
     for (x, y) in st["pts"]:
         x -= cx
         y -= cy
-        if not args.no_flip:
-            y = -y
         pts.append((x, y))
     strokes.append({
         "pts": pts,
@@ -528,8 +524,6 @@ skk.speed(10)
 skk.pensize(2)
 skk.pendown()
 
-print('uint8_t sega_vector[] = {')
-
 sz = 1
 x3, y3 = 0.0, 0.0  # start at origin after centering
 
@@ -557,6 +551,8 @@ for idx, rev in order:
         skk.teleport(sx, sy)
         sz += 1
         printSegaVector(sega_color, x3, y3, sx, sy)
+        # keep sega vector stream in sync with turtle position
+        x3, y3 = sx, sy
     wn.tracer(1, 10)
 
     # Draw polyline (beam-on for each segment)
@@ -569,8 +565,7 @@ for idx, rev in order:
         x3, y3 = nx, ny
 
 print("   0x80, 0x00, 0x00, 0x00")
-print('};')
-print('uint16_t sega_vector_sz =', sz, ';')
+print('#define SEGA_VECTOR_SZ ', sz)
 
 doc.unlink()
 skk.hideturtle()
