@@ -142,11 +142,28 @@ def drawVector( visible, color, length ):
 
 
 def drawSegaSymbol(vectors, speed):
+    # contain/letter box non-square image
     minx, miny, maxx, maxy = compute_bbox(vectors)
-    pad = 20
-    if maxx - minx < 1: maxx += 1
-    if maxy - miny < 1: maxy += 1
-    wn.setworldcoordinates(minx - pad, miny - pad, maxx + pad, maxy + pad)
+    pad = 20.0
+    w = max(1.0, (maxx - minx))
+    h = max(1.0, (maxy - miny))
+    win_w = float(wn.window_width())
+    win_h = float(wn.window_height())
+    aspect = win_w / win_h if win_h > 0 else 1.0
+    cx = (minx + maxx) * 0.5
+    cy = (miny + maxy) * 0.5
+    world_w = w
+    world_h = h
+    if (world_w / world_h) > aspect:
+        world_h = world_w / aspect
+    else:
+        world_w = world_h * aspect
+    x0 = cx - world_w * 0.5 - pad
+    x1 = cx + world_w * 0.5 + pad
+    y0 = cy - world_h * 0.5 - pad
+    y1 = cy + world_h * 0.5 + pad
+
+    wn.setworldcoordinates(x0, y0, x1, y1)
 
     skk.reset()
     skk.pensize(2)
