@@ -19,7 +19,7 @@ parser.add_argument('filename')
 parser.add_argument('-r', '--render', type=hex_int, help='render vector symbol at address')
 parser.add_argument('-w', '--write', action='store_true', help='write vector symbols to disk as svg')
 parser.add_argument('-s', '--search', nargs='?', const=3, type=int, help='search ROM for symbols of at least x vectors')
-parser.add_argument(      '--speed', type=int, default=10, help='0=fast, 10=slow')
+parser.add_argument(      '--speed', type=int, default=10, help='0=full, 1=slow 10=fast')
 parser.add_argument(      '--rotate', nargs='?', default=90, const=0, type=int, help='rotate 90 degrees, typical for sega roms')
 parser.add_argument('-t', '--text', action='store_true',
                     help='treat input as text/C header; extract 0xNN bytes instead of reading raw binary')

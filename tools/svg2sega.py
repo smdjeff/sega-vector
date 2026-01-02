@@ -21,14 +21,16 @@ parser.add_argument('filename')
 parser.add_argument('-s', '--scale', nargs='?', const=1.0, type=float, default=1.0,
                     help='scale image up or down by percentage')
 parser.add_argument('-d', '--debug', action='store_true', help='print debug information')
-parser.add_argument('--no-retrace', action='store_true',
+parser.add_argument(      '--no-retrace', action='store_true',
                     help='disable dashed gray retrace overlay (default: enabled)')
-parser.add_argument('--no-opt', action='store_true',
+parser.add_argument(      '--no-opt', action='store_true',
                     help='disable stroke ordering optimization to reduce beam moves')
-parser.add_argument('--merge', nargs='?', const=1.0, type=float, default=0.0,
+parser.add_argument(      '--merge', nargs='?', const=1.0, type=float, default=1.0,
                     help='simplify by merging collinear adjacent segments (10+ for agressive)')
-parser.add_argument('--rdp', nargs='?', const=1.0, type=float, default=0.0,
+parser.add_argument(      '--rdp', nargs='?', const=1.0, type=float, default=0.0,
                     help='simplify with Ramer–Douglas–Peucker (10.0+ for agressive)')
+parser.add_argument(      '--speed', type=int, default=10, help='0=full, 1=slow 10=fast')
+parser.add_argument(      '--close', action='store_true', help='close window on complete')
 args = parser.parse_args()
 
 # Used to detect breaks between subpaths.
@@ -219,6 +221,7 @@ def draw_dashed_line(t, x0, y0, x1, y1, dash=8.0, gap=6.0):
         t.penup()
         pos = b + gap
 
+sega_vector_count = 0
 
 def printSegaVector(sega_color, x0, y0, x1, y1):
     distance, angle = calculate_angle_distance(x0, y0, x1, y1)
@@ -231,6 +234,8 @@ def printSegaVector(sega_color, x0, y0, x1, y1):
         print("   0x{0:02x}, 0x{1:02x}, 0x{2:02x}, 0x{3:02x},".format(
             sega_color, sega_size, sega_angle_lsb, sega_angle_msb
         ))
+        global sega_vector_count
+        sega_vector_count += 1
 
 
 def dist2(a, b):
@@ -427,8 +432,6 @@ def split_path_into_strokes(d):
 
 # ============================================================
 
-print()
-
 doc = minidom.parse(args.filename)
 paths = doc.getElementsByTagName("path")
 polylines = doc.getElementsByTagName("polyline")
@@ -520,11 +523,10 @@ wn.title("Sega Vectors")
 wn.colormode(255)
 
 skk = turtle.Turtle()
-skk.speed(10)
+skk.speed( args.speed )
 skk.pensize(2)
 skk.pendown()
 
-sz = 1
 x3, y3 = 0.0, 0.0  # start at origin after centering
 
 # Draw + emit Sega vectors in optimized order
@@ -549,24 +551,28 @@ for idx, rev in order:
             draw_dashed_line(skk, x3, y3, sx, sy, dash=10.0, gap=8.0)
             skk.pen(old_pen)
         skk.teleport(sx, sy)
-        sz += 1
         printSegaVector(sega_color, x3, y3, sx, sy)
         # keep sega vector stream in sync with turtle position
         x3, y3 = sx, sy
-    wn.tracer(1, 10)
+    if (args.speed): wn.tracer(1, args.speed)
 
     # Draw polyline (beam-on for each segment)
     skk.pencolor(color)
     skk.goto(sx, sy)
     for (nx, ny) in pts[1:]:
         skk.goto(nx, ny)
-        sz += 1
         printSegaVector(sega_color | 0x01, x3, y3, nx, ny)
         x3, y3 = nx, ny
+    wn.update()
 
-print("   0x80, 0x00, 0x00, 0x00")
-print('#define SEGA_VECTOR_SZ ', sz)
+base = os.path.basename(args.filename)
+name = os.path.splitext(base)[0]
+macro = re.sub(r'[^A-Za-z0-9]+', '_', name).strip('_').upper()
+
+print("   0x80, 0x00, 0x00, 0x00,") 
+print(f'#define V_{macro}_SZ {sega_vector_count+1}')
 
 doc.unlink()
 skk.hideturtle()
-wn.mainloop()
+if not args.close:
+    wn.mainloop()
