@@ -14,6 +14,7 @@ prereq:
 clean:
 	$(RM) -rf build
 	$(RM) -rf roms
+	$(RM) art/*.h
 
 # development is made easier by loading bootrom into 1873.cpu-u25
 # then romulator can be quickly loaded to a single large rom on the ROM board
@@ -23,7 +24,7 @@ CFLAGS += -DMAME_BUILD
 
 MAME = /Users/jmathews/Downloads/mame-master/mamed
 
-gamerom: prereq bootrom
+gamerom: prereq bootrom art_headers
 	@echo "building 32k rom at 0x800 for use with sega-boot-rom in cpu rom socket"
 	zcc +z80 --list -m -vn -SO3 -compiler=sdcc -startup=1 font.c math.c main.c usb.c -o $@ -create-app $(CFLAGS) -Cz"--rombase=0x0800 --romsize=30720"
 	@mv $@* build/ 2>/dev/null || true
@@ -62,6 +63,16 @@ mame: roms
 	rm -r startrek
 	mv roms.zip build/startrek.zip
 	$(MAME) -rp ./build startrek
+
+SVGS := $(wildcard art/*.svg)
+HDRS := $(SVGS:.svg=.h)
+
+.PHONY: art_headers
+art_headers: $(HDRS)
+
+art/%.h: art/%.svg
+	../tools/svg2sega.py --speed 0 --close $< > $@
+
 
 # ROM Emulator https://github.com/Kris-Sekula/EPROM-EMU-NG/
 # python3 -m pip install serial

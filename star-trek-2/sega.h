@@ -205,6 +205,7 @@ typedef struct {
 #define VFIELD_SIZE(row)    (((row)*4)+1)
 #define VFIELD_ANGLE_L(row) (((row)*4)+2)
 #define VFIELD_ANGLE_H(row) (((row)*4)+3)
+#define V_SIZE(x)            (x*4)
 
 // L R R G G B B D
 #define SEGA_VISIBLE       (0x01)
@@ -227,7 +228,7 @@ typedef struct {
 #define SEGA_COLOR_BRWHITE (0x7E|SEGA_VISIBLE)
 #define SEGA_COLOR_WHITE   (0x54|SEGA_VISIBLE)
 #define SEGA_COLOR_GRAY    (0x2A|SEGA_VISIBLE)
-#define SIZE(x)            (x*10)
+#define S_SIZE(x)          (x*10)
 
 #define CENTER_X (1024)
 #define CENTER_Y (1024)
