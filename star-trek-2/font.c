@@ -217,7 +217,7 @@ void drawString( symbol_t *const sym, uint16_t x, uint16_t y, uint8_t scale, uin
    sym->vector_addr = V_ADDR(0); // blank
 
   for (uint8_t i=0; i<len; i++) {
-      if ( (uint16_t)&vec[v_sz] + len + (sizeof(vector_t)*2) >= VECTOR_RAM_END ) kill( 1 );
+      if ( (uint16_t)&vec[v_sz] + len + (sizeof(vector_t)*2) >= VECTOR_RAM_END ) kill(0xE1);
 
       char ch = str[ i ];
       uint8_t *in = (uint8_t*)fontAddress( ch );
@@ -245,7 +245,7 @@ void drawString( symbol_t *const sym, uint16_t x, uint16_t y, uint8_t scale, uin
      }
    }
 
-   if ( (uint16_t)&vec[v_sz-sizeof(vector_t)] < VECTOR_RAM + SYMBOLS_SZ ) kill( 2 );
+   if ( (uint16_t)&vec[v_sz-sizeof(vector_t)] < VECTOR_RAM + SYMBOLS_SZ ) kill(0xE2);
 
    vec[v_sz - sizeof(vector_t)] |= SEGA_LAST;
 
@@ -263,8 +263,8 @@ void drawString( symbol_t *const sym, uint16_t x, uint16_t y, uint8_t scale, uin
 
 void colorize( uint8_t *const vec, uint16_t len, uint8_t color ) {
    for (uint16_t i=0; i<len; i+=sizeof(vector_t)) {
-      if ( (uint16_t)&vec[i] < VECTOR_RAM + SYMBOLS_SZ  ) kill(3);
-      if ( (uint16_t)&vec[i] + len >= VECTOR_RAM_END ) kill(4);
+      if ( (uint16_t)&vec[i] < VECTOR_RAM + SYMBOLS_SZ  ) kill(0xE3);
+      if ( (uint16_t)&vec[i] + len >= VECTOR_RAM_END ) kill(0xE4);
       vec[i] &= ~0x7E;
       vec[i] |= (color & 0x7E);
    }

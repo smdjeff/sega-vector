@@ -402,6 +402,7 @@ uint16_t xyToVector(uint16_t x, uint16_t y);
 
    #define kill(x) \
       do { \
+        writeDebug('!',x); \
         uint8_t *halt = (uint8_t*)(0x0000); \
         *halt = x; \
       } while(0)

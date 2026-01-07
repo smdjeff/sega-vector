@@ -150,7 +150,6 @@ const uint8_t vector[] = {
     #define V_LAST (V_HAND+V_HAND_SZ)
  };
 
-
    const uint8_t symbol[] = {
       // 10 bytes each entry
       // flags      x             y             address     rotation             scale
@@ -179,7 +178,7 @@ const uint8_t vector[] = {
       #define S_SHIRT   9
       0, LE(1024), LE(1024), LE(V_ADDR(V_SHIRT)), LE(SEGA_ANGLE(0)),   0x40,
 
-      #define S_EXPRESSION1   10
+      #define S_EXPRESSION   10
       0, LE(1024), LE(1024), LE(V_ADDR(V_EXPRESSION1)), LE(SEGA_ANGLE(0)),   0x40,
 
       #define S_HAND      11
@@ -201,7 +200,36 @@ vector_t *const vectors = (vector_t*)(VECTOR_RAM_BASE); // arbitrary location in
 
 
 
+const uint8_t vector_expression2[] = {
+    #include "art/expression2.h"
+};
+
+const uint8_t vector_expression3[] = {
+    #include "art/expression3.h"
+};
    
+void drawExpression(uint8_t ix) {
+   switch (ix) {
+   case 1:
+      symbols[S_EXPRESSION].visible = false; 
+      memcpy( (uint8_t*)V_ADDR(V_EXPRESSION1), &vector[V_SIZE(V_EXPRESSION1)], V_SIZE(V_EXPRESSION1_SZ) );
+      symbols[S_EXPRESSION].visible = true; 
+      break;
+   case 2:
+      symbols[S_EXPRESSION].visible = false; 
+      memcpy( (uint8_t*)V_ADDR(V_EXPRESSION1), vector_expression2, sizeof(vector_expression2) );
+      symbols[S_EXPRESSION].visible = true; 
+      break;
+   case 3:
+      symbols[S_EXPRESSION].visible = false; 
+      memcpy( (uint8_t*)V_ADDR(V_EXPRESSION1), vector_expression3, sizeof(vector_expression3) );
+      symbols[S_EXPRESSION].visible = true; 
+      break;
+   default: 
+      symbols[S_EXPRESSION].visible = false; 
+      break;
+   }
+}
 
 void drawHand(uint16_t vec_angle) {
    int16_t dx, dy;
@@ -209,6 +237,14 @@ void drawHand(uint16_t vec_angle) {
    symbols[S_HAND].x = CENTER_X + 200 + dx;
    symbols[S_HAND].y = CENTER_Y - 100 - dy;
    symbols[S_HAND].rotation = (SEGA_ANGLE(90) + (dy >> 2)) & 0x03FF;
+
+   static uint16_t last_tick = 0;
+   if ( system_tick - last_tick > SECONDS(3) ) {
+      last_tick = system_tick;
+      static uint8_t ix = 0;
+      drawExpression(ix++);
+      if (ix>3) ix = 1;
+   }
 }
 
 
@@ -654,7 +690,7 @@ static void beginPlay(void) {
    enableSymbol( S_HAND, CENTER_X, CENTER_Y, 0, 0x40 );
    enableSymbol( S_HEAD, CENTER_X, CENTER_Y, SEGA_ANGLE(90), 0x40 );
    enableSymbol( S_SHIRT, CENTER_X+20, CENTER_Y-220, SEGA_ANGLE(90), 0x40 );
-   enableSymbol( S_EXPRESSION1, CENTER_X+25, CENTER_Y-30, SEGA_ANGLE(90), 0x40 );
+   enableSymbol( S_EXPRESSION, CENTER_X+25, CENTER_Y-30, SEGA_ANGLE(90), 0x40 );
 }
 
 
