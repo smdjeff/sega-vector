@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="90px" height="138px" viewBox="0 0 90 138" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
+    <title>w</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="w" transform="translate(1.000000, 0.000000)" fill-rule="nonzero" stroke="#979797">
+            <path d="M0,127 L0,1 L0,127 Z" id="Path" transform="translate(0.500000, 64.000000) scale(1, -1) translate(-0.500000, -64.000000) "></path>
+            <polyline id="Path-11" transform="translate(22.500000, 68.750000) scale(1, -1) translate(-22.500000, -68.750000) " points="0 11.0805861 8.59550562 0 24.6741573 0 34.3820225 0 44.4 11.0805861 45 137.5"></polyline>
+            <polyline id="Path-11" transform="translate(66.250000, 68.250000) scale(1, -1) translate(-66.250000, -68.250000) " points="44 11 52.5 0 68.4 0 78 0 87.5 9 88.5 136.5"></polyline>
+        </g>
+    </g>
+</svg>

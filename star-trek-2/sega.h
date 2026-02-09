@@ -340,7 +340,6 @@ uint16_t installFonts( uint16_t addr );
 uint16_t fontAddress( char c );
 void drawString( symbol_t *const sym, uint16_t x, uint16_t y, uint8_t scale, uint8_t color, const char *const str, uint8_t len );
 void drawScore( uint8_t score, bool reset );
-void colorize( uint8_t *const vector, uint16_t len, uint8_t color );
 
 
 ////////////////////////////////////

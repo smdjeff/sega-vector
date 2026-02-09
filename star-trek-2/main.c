@@ -168,23 +168,27 @@ const uint8_t vector[] = {
       0,            LE(1024), LE(1024), LE(V_ADDR(V_BLANK)),     LE(0),               0x40,
       #define S_STRING    6
       0,            LE(1024), LE(1024), LE(V_ADDR(V_BLANK)),     LE(0),               0x40,
+      #define S_STRING1    7
+      0,            LE(1024), LE(1024), LE(V_ADDR(V_BLANK)),     LE(0),               0x40,
+      #define S_STRING2    8
+      0,            LE(1024), LE(1024), LE(V_ADDR(V_BLANK)),     LE(0),               0x40,
 
-      #define S_LOGO    7
+      #define S_LOGO    9
       0, LE(1024), LE(1024), LE(V_ADDR(V_BOX)), LE(SEGA_ANGLE(0)),   0x80,
 
-      #define S_HEAD    8
+      #define S_HEAD    10
       0, LE(1024), LE(1024), LE(V_ADDR(V_HEAD)), LE(SEGA_ANGLE(0)),   0x40,
 
-      #define S_SHIRT   9
+      #define S_SHIRT   11
       0, LE(1024), LE(1024), LE(V_ADDR(V_SHIRT)), LE(SEGA_ANGLE(0)),   0x40,
 
-      #define S_EXPRESSION   10
+      #define S_EXPRESSION   12
       0, LE(1024), LE(1024), LE(V_ADDR(V_EXPRESSION1)), LE(SEGA_ANGLE(0)),   0x40,
 
-      #define S_HAND      11
+      #define S_HAND      13
       0, LE(1024), LE(1024), LE(V_ADDR(V_HAND)), LE(SEGA_ANGLE(0)),   0x40,
 
-      #define S_LAST      12
+      #define S_LAST      14
       SEGA_VISIBLE|SEGA_LAST, LE(1024), LE(1024), LE(V_ADDR(V_BLANK)), LE(0), 0x80,
    };
 
@@ -443,10 +447,8 @@ static void endAttract( void ) {
    resetVectors();
 
    // set font 'a' thru 'z' to regular white
-   colorize( (uint8_t*)fontAddress('a'), fontAddress('z'+1)-fontAddress('a'), SEGA_COLOR_WHITE );
 
    // set numbers '0' thru '9' to pink
-   colorize( (uint8_t*)fontAddress('0'), fontAddress('9'+1)-fontAddress('0'), SEGA_COLOR_MAGENTA );
 }
 
 
@@ -510,8 +512,6 @@ static bool drawAttract( void ) {
          char s[7] = {0,};
          memcpy( &s[0], high_name[state_ix], 3 );
          digits3( &s[4], &s[5], &s[6], high_score[state_ix] );
-         colorize( (uint8_t*)fontAddress('a'), fontAddress('z'+1)-fontAddress('a'), SEGA_COLOR_CYAN );
-         colorize( (uint8_t*)fontAddress('0'), fontAddress('9'+1)-fontAddress('0'), SEGA_COLOR_WHITE );
          drawString( &symbols[S_STRING], 0, state_iy, 0xA0, 0, s, sizeof(s) );
          setTrajectory( S_STRING, 20, SEGA_ANGLE(90) );
          state_ix--;
@@ -628,7 +628,6 @@ static bool drawInitials( void ) {
                __asm__( "nop" );
             }
             last_tick = system_tick;
-            colorize( (uint8_t*)fontAddress('a'), fontAddress('z'+1)-fontAddress('a'), (color&0x3F) << 1 );
          }
          return true;
       }
@@ -738,8 +737,6 @@ static bool drawGameOver(void) {
 static void beginDiagnosticsIO( void ) {
    resetVectors();
    symbols[S_STRING].flags = SEGA_VISIBLE|SEGA_LAST;
-   colorize( (uint8_t*)fontAddress('a'), fontAddress('z'+1)-fontAddress('a'), SEGA_COLOR_WHITE );
-   colorize( (uint8_t*)fontAddress('0'), fontAddress('9'+1)-fontAddress('0'), SEGA_COLOR_WHITE );
    enableSymbol( S_SCORE0, CENTER_X-70, CENTER_Y-40, SEGA_ANGLE(0), 0xA0 );
    enableSymbol( S_SCORE1, CENTER_X-10, CENTER_Y-40, SEGA_ANGLE(0), 0xA0 );
    enableSymbol( S_SCORE2, CENTER_X+50, CENTER_Y-40, SEGA_ANGLE(0), 0xA0 );

@@ -5,6 +5,9 @@
 # ~/Downloads/dasmxx-master/src/dasmz80 dasmxx/sega.txt > dasmxx/gamerom.asm
 # minipro -p M2716@DIP24 -w /Users/jeff/Downloads/bootrom.bin  --vpp=25
 
+# patch sdcc for crt_page_zero
+# see https://www.z88dk.org/forum/viewtopic.php?t=12010
+
 all: gamerom
 
 prereq:
@@ -15,6 +18,7 @@ clean:
 	$(RM) -rf build
 	$(RM) -rf roms
 	$(RM) art/*.h
+	$(RM) art/font/*.h
 
 # development is made easier by loading bootrom into 1873.cpu-u25
 # then romulator can be quickly loaded to a single large rom on the ROM board
@@ -22,6 +26,7 @@ clean:
 CFLAGS = -DENABLE_BOOTROM
 CFLAGS += -DMAME_BUILD
 
+#MAME = mame
 MAME = /Users/jmathews/Downloads/mame-master/mamed
 
 gamerom: prereq bootrom art_headers
@@ -64,14 +69,21 @@ mame: roms
 	mv roms.zip build/startrek.zip
 	$(MAME) -rp ./build startrek
 
-SVGS := $(wildcard art/*.svg)
-HDRS := $(SVGS:.svg=.h)
+
+SVGS_ROOT := $(wildcard art/*.svg)
+SVGS_FONT := $(wildcard art/font/*.svg)
+HDRS_ROOT := $(SVGS_ROOT:.svg=.h)
+HDRS_FONT := $(SVGS_FONT:.svg=.h)
+HDRS := $(HDRS_ROOT) $(HDRS_FONT)
 
 .PHONY: art_headers
 art_headers: $(HDRS)
 
-art/%.h: art/%.svg
-	../tools/svg2sega.py --speed 0 --close $< > $@
+$(HDRS_ROOT): art/%.h: art/%.svg
+	../tools/svg2sega.py --speed 0 --merge 0 --rdp 1.0 --close $< > $@
+
+$(HDRS_FONT): art/font/%.h: art/font/%.svg
+	../tools/svg2sega.py --scale 0.4 --rotate 90 --speed 0 --close $< > $@
 
 
 # ROM Emulator https://github.com/Kris-Sekula/EPROM-EMU-NG/
