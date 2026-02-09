@@ -20,6 +20,8 @@ parser = argparse.ArgumentParser(
 parser.add_argument('filename')
 parser.add_argument('-s', '--scale', nargs='?', const=1.0, type=float, default=1.0,
                     help='scale image up or down by percentage')
+parser.add_argument(      '--rotate', nargs='?', default=0, const=0, type=int, 
+                    help='rotate angle in degrees')
 parser.add_argument('-d', '--debug', action='store_true', help='print debug information')
 parser.add_argument(      '--no-retrace', action='store_true',
                     help='disable dashed gray retrace overlay (default: enabled)')
@@ -68,23 +70,8 @@ def apply_rotation(x, y, cx, cy, angle_deg):
     return x_new, y_new
 
 
-def parse_transform(transform_str):
-    """
-    Minimal existing polyline transform support:
-    handles "translate(...) rotate(...)" on the element itself.
-    (Group transforms are handled separately by sum_parent_translate().)
-    """
-    transform_str = transform_str or ""
-    cx, cy, angle = 0.0, 0.0, 0.0
-    if "translate" in transform_str and "rotate" in transform_str:
-        translate_part = transform_str.split("translate(")[1].split(")")[0]
-        translate_part = translate_part.replace(",", " ")
-        parts = translate_part.split()
-        if len(parts) >= 2:
-            cx, cy = map(float, parts[:2])
-        rotate_part = transform_str.split("rotate(")[1].split(")")[0]
-        angle = float(rotate_part.split()[0])
-    return cx, cy, angle
+
+
 
 
 def inherited_stroke_rgb(node):
@@ -143,11 +130,69 @@ def calculate_angle_distance(x0, y0, x1, y1):
     distance = math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
     distance *= float(args.scale)
     angle_radians = math.atan2(y1 - y0, x1 - x0)
-    angle = math.degrees(angle_radians)
+    angle = math.degrees(angle_radians) + float(args.rotate)
     if angle < 0:
         angle += 360
+    if angle > 360:
+        angle -= 360
     return round(distance), round(angle)
 
+
+def parse_transform(transform_str):
+    transform_str = (transform_str or "").strip()
+    cx = cy = 0.0
+    angle = 0.0
+    sx = sy = 1.0
+
+    if not transform_str:
+        return cx, cy, angle, sx, sy
+
+    # 1) Detect flip/scale about a point: translate(p) scale(s) translate(-p)
+    #    Example: translate(42,64) scale(-1,1) translate(-42,-64)
+    m = re.search(
+        r'translate\(\s*([-\d.]+)[ ,]+([-\d.]+)\s*\)\s*'
+        r'scale\(\s*([-\d.]+)(?:[ ,]+([-\d.]+))?\s*\)\s*'
+        r'translate\(\s*([-\d.]+)[ ,]+([-\d.]+)\s*\)',
+        transform_str
+    )
+    if m:
+        px = float(m.group(1)); py = float(m.group(2))
+        sx = float(m.group(3))
+        sy = float(m.group(4)) if m.group(4) is not None else sx
+        nx = float(m.group(5)); ny = float(m.group(6))
+
+        # sanity: second translate is typically -px, -py
+        # If it's not, we still assume pivot is (px,py) because that's the intent.
+        cx, cy = px, py
+
+    # 2) Parse rotate(...) if present (SVG allows rotate(a) or rotate(a cx cy))
+    m = re.search(r'rotate\(\s*([-\d.]+)(?:[ ,]+([-\d.]+)[ ,]+([-\d.]+))?\s*\)', transform_str)
+    if m:
+        angle = float(m.group(1))
+        if m.group(2) is not None and m.group(3) is not None:
+            cx = float(m.group(2))
+            cy = float(m.group(3))
+
+    # 3) If there is a bare scale(...) (and we didn't already capture sx/sy above), grab it.
+    if sx == 1.0 and sy == 1.0:
+        m = re.search(r'scale\(\s*([-\d.]+)(?:[ ,]+([-\d.]+))?\s*\)', transform_str)
+        if m:
+            sx = float(m.group(1))
+            sy = float(m.group(2)) if m.group(2) is not None else sx
+
+    # 4) Legacy: if we still don't have a pivot and there is translate(x,y), use it as pivot
+    #    (this matches your old assumption-ish behavior)
+    if cx == 0.0 and cy == 0.0:
+        m = re.search(r'translate\(\s*([-\d.]+)[ ,]+([-\d.]+)\s*\)', transform_str)
+        if m:
+            cx = float(m.group(1))
+            cy = float(m.group(2))
+
+    return cx, cy, angle, sx, sy
+
+
+def apply_scale(x, y, cx, cy, sx, sy):
+    return (cx + (x - cx) * sx, cy + (y - cy) * sy)
 
 def polyline_to_path(polyline):
     points = (polyline.getAttribute("points") or "").strip()
@@ -155,9 +200,8 @@ def polyline_to_path(polyline):
         return None
 
     transform = polyline.getAttribute("transform")
-    cx, cy, angle = parse_transform(transform)
+    cx, cy, angle, sx, sy = parse_transform(transform)
 
-    # FIX: allow "x,y x,y" and "x y x y"
     nums = points.replace(",", " ").split()
     if len(nums) % 2 != 0:
         raise ValueError(f"Invalid number of coordinates: {len(nums)}")
@@ -166,8 +210,16 @@ def polyline_to_path(polyline):
     for i in range(0, len(nums), 2):
         x = float(nums[i])
         y = float(nums[i + 1])
+
+        # Apply scale/flip first (SVG order in your flip case is translate->scale->translate,
+        # which is equivalent to scaling about (cx,cy))
+        if sx != 1.0 or sy != 1.0:
+            x, y = apply_scale(x, y, cx, cy, sx, sy)
+
+        # Then rotation
         if angle:
             x, y = apply_rotation(x, y, cx, cy, angle)
+
         pts.append((x, y))
 
     d = f"M {pts[0][0]} {pts[0][1]}"
@@ -569,8 +621,9 @@ base = os.path.basename(args.filename)
 name = os.path.splitext(base)[0]
 macro = re.sub(r'[^A-Za-z0-9]+', '_', name).strip('_').upper()
 
-print("   0x80, 0x00, 0x00, 0x00,") 
-print(f'#define V_{macro}_SZ {sega_vector_count+1}')
+# return to center to make subsequent draws easier
+printSegaVector(0x80, x3, y3, 0.0, 0.0)
+print(f'#define V_{macro}_SZ {sega_vector_count}')
 
 doc.unlink()
 skk.hideturtle()
