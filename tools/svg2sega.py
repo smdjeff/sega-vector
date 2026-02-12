@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/usr/bin/env python3
 
 import os, sys, time
 import math
@@ -284,7 +284,8 @@ def printSegaVector(sega_color, x0, y0, x1, y1):
         sega_angle_lsb = sega_angle & 0xFF
         sega_angle_msb = (sega_angle >> 8) & 0xFF
         print("   0x{0:02x}, 0x{1:02x}, 0x{2:02x}, 0x{3:02x},".format(
-            sega_color, sega_size, sega_angle_lsb, sega_angle_msb
+            sega_color if distance == 0 else (sega_color & 0x7F),
+            sega_size, sega_angle_lsb, sega_angle_msb
         ))
         global sega_vector_count
         sega_vector_count += 1
@@ -622,7 +623,7 @@ name = os.path.splitext(base)[0]
 macro = re.sub(r'[^A-Za-z0-9]+', '_', name).strip('_').upper()
 
 # return to center to make subsequent draws easier
-printSegaVector(0x80, x3, y3, 0.0, 0.0)
+printSegaVector(sega_color | 0x80, x3, y3, 0.0, 0.0)
 print(f'#define V_{macro}_SZ {sega_vector_count}')
 
 doc.unlink()
