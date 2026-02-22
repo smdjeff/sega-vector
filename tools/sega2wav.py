@@ -7,7 +7,7 @@ Reads speech data from a Sega ROM, decompresses it and creates a wav file.
 Follows SP0250 Applications Manual for 15 byte stream framing and filter coefficients.
 Largely based on MAME's GI SP0250 digital LPC sound synthesizer By O. Galibert.
 
-NOTE: 
+TODO: 
     Currently Sega G80's 8035 decompression scheme is unknown so
     input file must be decompressed SP0250 LPC from MAME dump.
 '''
@@ -36,7 +36,7 @@ class SP0250:
         # SP0250 filter coefficients
         coefs = [
               0,   9,  17,  25,  33,  41,  49,  57,  65,  73,  81,  89,  97, 105, 113, 121,
-            129, 137, 145, 153, 161, 169, 177, 185, 193, 201, 203, 217, 225, 233, 241, 249,
+            129, 137, 145, 153, 161, 169, 177, 185, 193, 201, 209, 217, 225, 233, 241, 249,
             257, 265, 273, 281, 289, 297, 301, 305, 309, 313, 317, 321, 325, 329, 333, 337,
             341, 345, 349, 353, 357, 361, 365, 369, 373, 377, 381, 385, 389, 393, 397, 401,
             405, 409, 413, 417, 421, 425, 427, 429, 431, 433, 435, 437, 439, 441, 443, 445,
