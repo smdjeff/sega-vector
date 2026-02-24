@@ -364,6 +364,8 @@ def wav_to_sp0250(input_wav, output_bin, pre_emph, low, high, gate, order, v_bia
     with open(output_bin, 'wb') as f:
         for fd in encoded_frames:
             f.write(fd)
+        # end of stream
+        f.write(b'\x00' * 15)
 
     total_samples = sum(
         encoded_frames[i][5] * (encoded_frames[i][8] & 0x3F)
@@ -384,16 +386,16 @@ if __name__ == "__main__":
     )
     parser.add_argument("input",  help="Input WAV file")
     parser.add_argument("output", help="Output binary file")
-    parser.add_argument("--pre_emph", type=float, default=0.0,
-        help="Pre-emphasis coefficient, applied to LPC only (default 0.0)")
-    parser.add_argument("--low",  type=float, default=100.0,
-        help="Bandpass low cutoff Hz (default 100)")
+    parser.add_argument("--pre_emph", type=float, default=0.3,
+        help="Pre-emphasis coefficient, applied to LPC only (default 0.3)")
+    parser.add_argument("--low",  type=float, default=75.0,
+        help="Bandpass low cutoff Hz (default 75)")
     parser.add_argument("--high", type=float, default=3200.0,
         help="Bandpass high cutoff Hz (default 3200)")
-    parser.add_argument("--gate", type=float, default=0.03,
-        help="RMS silence gate threshold (default 0.03)")
-    parser.add_argument("--order", type=int, default=10,
-        help="LPC order, SP0250 max is 12 (default 10)")
+    parser.add_argument("--gate", type=float, default=0.01,
+        help="RMS silence gate threshold (default 0.01)")
+    parser.add_argument("--order", type=int, default=12,
+        help="LPC order, SP0250 max is 12 (default 12)")
     parser.add_argument("--voice-bias", type=float, default=0.15,
         help="Adjusts YIN voiced_strength threshold (default 0.15). "
              "Positive = more voiced. Range roughly -0.3 to +0.3.")
