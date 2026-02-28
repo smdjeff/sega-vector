@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 
-
 '''
 Reads speech data from a Sega ROM, decompresses it and creates a wav file.
 
 Follows SP0250 Applications Manual for 15 byte stream framing and filter coefficients.
 Largely based on MAME's GI SP0250 digital LPC sound synthesizer By O. Galibert.
 
-TODO: 
-    Currently Sega G80's 8035 decompression scheme is unknown so
-    input file must be decompressed SP0250 LPC from MAME dump.
+Note: Currently Sega G80's 8035 decompression scheme is unknown so
+      input file must be decompressed SP0250 LPC from. These can be obtainted
+      from either a MAME runtime dump or wav2lpc.py
 '''
- 
 
 import numpy as np
 import wave
