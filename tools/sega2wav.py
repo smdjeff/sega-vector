@@ -66,7 +66,7 @@ class SP0250:
         self.filters[5]['F'] = self._decode_gc(fifo[14])
         
         coeffs_str = ", ".join([f"F{i}:{f['F']}/B{i}:{f['B']}" for i, f in enumerate(self.filters)])
-        print(f"Frame {frame_idx:03d} | Amp: {self.amp:4d} | Pitch: {self.pitch:3d} | Coeffs: {coeffs_str}")
+        print(f"Frame {frame_idx:03d} | Amp: {self.amp:4d} | Pitch: {self.pitch:3d} | Repeat: {self.repeat} | Voiced: {self.voiced} | Coeffs: {coeffs_str}")
 
         self.pcount = 0
         self.rcount = 0
@@ -76,35 +76,33 @@ class SP0250:
     def generate_samples(self):
         samples = []
         pitch_val = max(1, self.pitch)
-        
-        while self.rcount < self.repeat:
+        repeat_count = max(1, self.repeat)   # MAME: if(rcount >= repeat), rcount starts at 0
+
+        while self.rcount < repeat_count:
             if self.voiced:
                 z0 = float(self.amp) if self.pcount == 0 else 0.0
             else:
                 if self.rng & 1:
                     z0 = float(self.amp)
-                    self.rng ^= 0x24000 # LFSR tap
+                    self.rng ^= 0x24000
                 else:
                     z0 = float(-self.amp)
                 self.rng >>= 1
 
             for f in self.filters:
-                # 6-stage cascaded filter math
                 z0 += ((f['z1'] * f['F']) / 256.0) + ((f['z2'] * f['B']) / 512.0)
                 f['z2'] = f['z1']
                 f['z1'] = z0
-                
-                # Sanity clip to prevent floating point infinity
-                if z0 > 1e6: z0 = 1e6
+                if z0 > 1e6:  z0 =  1e6
                 if z0 < -1e6: z0 = -1e6
 
-            samples.append(z0 * 8.0) #  output margin
+            samples.append(z0 * 8.0)
 
             self.pcount += 1
             if self.pcount >= pitch_val:
                 self.pcount = 0
                 self.rcount += 1
-                
+
         return samples
 
 def convert_bin_to_wav(input_file, output_file):
@@ -123,7 +121,7 @@ def convert_bin_to_wav(input_file, output_file):
 
     if not all_samples:
         print("Error: No samples were generated.")
-        return
+        sys.exit(1)
 
     # float64 to handle values before final clipping
     audio_data = np.array(all_samples, dtype=np.float64)
@@ -144,3 +142,4 @@ if __name__ == "__main__":
         print("Usage: python sega2wav.py <input.bin> <output.wav>")
     else:
         convert_bin_to_wav(sys.argv[1], sys.argv[2])
+ 
