@@ -112,12 +112,19 @@ def load_wav(filename: str):
     Load a WAV file and resample to SP0250_RATE (10 kHz).
     Returns (samples_float32, SP0250_RATE).
     """
-    with wave.open(filename, 'rb') as wf:
-        src_rate = wf.getframerate()
-        n        = wf.getnframes()
-        data     = wf.readframes(n)
-        samples  = struct.unpack('<' + 'h' * n, data)
-        samples  = np.array(samples, dtype=np.float32) / 32768.0
+    try:
+        with wave.open(filename, 'rb') as wf:
+            n_channels = wf.getnchannels()
+            samp_width = wf.getsampwidth()
+            src_rate = wf.getframerate()
+            n        = wf.getnframes()
+            data     = wf.readframes(n)
+            samples  = struct.unpack('<' + 'h' * n, data)
+            samples  = np.array(samples, dtype=np.float32) / 32768.0
+
+    except (wave.Error, struct.error, ValueError) as e:
+        print(f"Skipping {filename}: File must be Mono 16-bit PCM")
+        sys.exit(0)
 
     if src_rate != SP0250_RATE:
         g   = gcd(SP0250_RATE, src_rate)
