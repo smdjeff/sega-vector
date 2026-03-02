@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 '''
-Reads speech data from a Sega ROM, decompresses it and creates a wav file.
+Decodes raw SP0250 LPC frames and creates WAV file.
 
 Follows SP0250 Applications Manual for 15 byte stream framing and filter coefficients.
 Largely based on MAME's GI SP0250 digital LPC sound synthesizer By O. Galibert.
@@ -11,6 +11,7 @@ Note: Currently Sega G80's 8035 decompression scheme is unknown so
       from either a MAME runtime dump or wav2lpc.py
 '''
 
+import argparse
 import numpy as np
 import wave
 import sys
@@ -63,8 +64,10 @@ class SP0250:
         self.filters[5]['B'] = self._decode_gc(fifo[13])
         self.filters[5]['F'] = self._decode_gc(fifo[14])
         
-        coeffs_str = ", ".join([f"F{i}:{f['F']}/B{i}:{f['B']}" for i, f in enumerate(self.filters)])
-        print(f"Frame {frame_idx:03d} | Amp: {self.amp:4d} | Pitch: {self.pitch:3d} | Repeat: {self.repeat} | Voiced: {self.voiced} | Coeffs: {coeffs_str}")
+        if not args.quiet:
+            coeffs_str = "  ".join([f"{int(f['F']):4d} {int(f['B']):4d}" for f in self.filters])
+            print(f"{frame_idx:4d}  {self.amp:4d}  "
+                  f"{self.pitch:4d}  {self.voiced:>1}  {coeffs_str}", file=sys.stderr)
 
         self.pcount = 0
         self.rcount = 0
@@ -108,6 +111,13 @@ def convert_bin_to_wav(input_file, output_file):
     all_samples = []
     frame_idx = 0
 
+    if not args.quiet:
+        header = (f"\n{'Fr':>4}  {'Amp':>4}  "
+                  f"{'PitD':>4}  {'V':>1}  "
+                  f"{'F1':>9}  {'F2':>9}  {'F3':>9}  {'F4':>9}  {'F5':>9}  {'F6':>9}")
+        print(header, file=sys.stderr)
+        print("-" * 85, file=sys.stderr)
+
     with open(input_file, 'rb') as f:
         while True:
             chunk = f.read(15)
@@ -136,8 +146,12 @@ def convert_bin_to_wav(input_file, output_file):
     print(f"\nSaved to {output_file}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python sega2wav.py <input.bin> <output.wav>")
-    else:
-        convert_bin_to_wav(sys.argv[1], sys.argv[2])
- 
+    parser = argparse.ArgumentParser(
+        description="Decode raw SP0250 LPC binary frames to WAV file.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("input", help="Input binary file (.lpc / .bin)")
+    parser.add_argument("output",  help="Output WAV (mono 16-bit PCM)")
+    parser.add_argument('--quiet', action='store_true', help='disable diagnostic logging')
+    args = parser.parse_args()
+    convert_bin_to_wav(args.input, args.output)

@@ -29,19 +29,10 @@ from scipy.signal import resample_poly
 # SP0250 clocks everything at its own rate.  All LPC analysis happens at
 # SP0250_RATE so that pole frequencies computed here map directly to the
 # correct SP0250 filter frequencies at playback.
-SP0250_RATE  = 10000          # encoder / analysis sample rate (Hz)
+SP0250_RATE  = 9286          # encoder / analysis sample rate (Hz)
+NORMAL_VOLUME = 0.70
 LPC_ORDER    = 12
 NUM_SECTIONS = 6
-
-PRE_EMPH = 0.97
-
-# Analysis window size (samples at SP0250_RATE).  Used for both LPC and
-# amplitude.  Fixed at 20 ms regardless of pitch — large enough for stable
-# autocorrelation at the lowest expected F0 (~80 Hz → 2.5 periods in 20 ms).
-LPC_WINDOW = 200
-
-# Silence gate.
-SILENCE_THRESHOLD = 0.015
 
 # Pole radius limit per section (F1→F6, ascending frequency order).
 POLE_RADIUS_BY_SECTION = [0.97, 0.97, 0.93, 0.88, 0.82, 0.75]
@@ -112,19 +103,12 @@ def load_wav(filename: str):
     Load a WAV file and resample to SP0250_RATE (10 kHz).
     Returns (samples_float32, SP0250_RATE).
     """
-    try:
-        with wave.open(filename, 'rb') as wf:
-            n_channels = wf.getnchannels()
-            samp_width = wf.getsampwidth()
-            src_rate = wf.getframerate()
-            n        = wf.getnframes()
-            data     = wf.readframes(n)
-            samples  = struct.unpack('<' + 'h' * n, data)
-            samples  = np.array(samples, dtype=np.float32) / 32768.0
-
-    except (wave.Error, struct.error, ValueError) as e:
-        print(f"Skipping {filename}: File must be Mono 16-bit PCM")
-        sys.exit(0)
+    with wave.open(filename, 'rb') as wf:
+        src_rate = wf.getframerate()
+        n        = wf.getnframes()
+        data     = wf.readframes(n)
+        samples  = struct.unpack('<' + 'h' * n, data)
+        samples  = np.array(samples, dtype=np.float32) / 32768.0
 
     if src_rate != SP0250_RATE:
         g   = gcd(SP0250_RATE, src_rate)
@@ -134,6 +118,12 @@ def load_wav(filename: str):
               f"(up={up}, down={dn})", file=sys.stderr)
         samples = resample_poly(samples, up, dn).astype(np.float32)
 
+    # Peak normalize to safe headroom
+    peak = np.max(np.abs(samples))
+    print(f"  Normalizing volume {peak:.2f} → {NORMAL_VOLUME}", file=sys.stderr)
+    if peak > 0:
+        samples *= (NORMAL_VOLUME / peak)
+
     return samples, SP0250_RATE
 
 
@@ -141,19 +131,21 @@ def load_wav(filename: str):
 # LPC via Levinson-Durbin
 # ===============================
 
-def lpc_levinson(x: np.ndarray, order: int) -> np.ndarray:
+def lpc_levinson(x: np.ndarray, order: int) -> tuple:
     """
     Levinson-Durbin LPC.  Guarantees all poles inside unit circle.
-    Returns polynomial [1, a1, ..., a_order].
+    Returns (a, E) where a = polynomial [1, a1, ..., a_order]
+    and E = final prediction error variance.
     """
     x = np.asarray(x, dtype=np.float64)
     N = len(x)
     r    = np.array([np.dot(x[:N-k], x[k:]) for k in range(order + 1)])
     a    = np.zeros(order + 1)
     a[0] = 1.0
-    e    = r[0]
+    r0   = float(r[0])
+    e    = r0
     if e <= 0:
-        return a
+        return a, 0.0, 0.0
     for i in range(1, order + 1):
         acc = sum(a[j] * r[i - j] for j in range(1, i))
         k   = -(r[i] + acc) / e
@@ -165,7 +157,7 @@ def lpc_levinson(x: np.ndarray, order: int) -> np.ndarray:
         e *= (1.0 - k * k)
         if e <= 1e-12:
             break
-    return a
+    return a, float(e), r0
 
 
 # ===============================
@@ -211,13 +203,10 @@ def enforce_constraints(F_t: float, B_t: float) -> tuple:
 # Amplitude encoding
 # ===============================
 
-def encode_amplitude(frame: np.ndarray) -> int:
-    """
-    SP0250 amplitude byte:  bits 7:5 = EXP,  bits 4:0 = MANT
-        actual_amplitude = MANT << EXP    (max = 31 << 7 = 3968)
-    """
-    rms    = float(np.sqrt(np.mean(frame ** 2)))
-    linear = int(rms * 32767)
+def _pack_amp(linear: int) -> int:
+    """Pack an integer amplitude into the SP0250 5-bit mantissa + 3-bit exponent byte."""
+    if linear > 3968:
+        print(f"warning: clipping {linear}")
     linear = max(0, min(linear, 3968))
     if linear == 0:
         return 0
@@ -225,6 +214,37 @@ def encode_amplitude(frame: np.ndarray) -> int:
     while exp < 7 and (linear >> exp) > 31:
         exp += 1
     return ((exp & 0x07) << 5) | (min(linear >> exp, 31) & 0x1F)
+
+
+def encode_amplitude(frame: np.ndarray, E: float, r0: float,
+                     pitch_enc: int, voiced: bool) -> int:
+    """
+    Compute the SP0250 amplitude register from the LPC filter gain.
+
+    The synthesis filter H(z) = 1/A(z) has power gain r0/E, where:
+      r0 = input energy of the analysis frame (r[0] from autocorrelation)
+      E  = Levinson-Durbin prediction error (residual energy)
+
+    sega2wav output pipeline:  z_out = amp_reg * H * 8  (then stored as int16)
+    We want:  output_rms_float == source_rms
+    So:       amp_reg * sqrt(r0/E) * 8 / 32768 == source_rms   [unvoiced]
+              amp_reg * sqrt(r0/(E*P)) * 8 / 32768 == source_rms [voiced, period P]
+
+    Solving:
+      unvoiced: amp_reg = source_rms * 4096 * sqrt(E/r0)
+      voiced:   amp_reg = source_rms * 4096 * sqrt(E*P/r0)
+    """
+    if E <= 0 or r0 <= 0:
+        return 0
+    source_rms = float(np.sqrt(np.mean(frame ** 2)))
+    if source_rms < 1e-6:
+        return 0
+
+    if voiced and pitch_enc > 1:
+        amp_reg = int(round(source_rms * 4096.0 * np.sqrt(E * pitch_enc / r0)))
+    else:
+        amp_reg = int(round(source_rms * 4096.0 * np.sqrt(E / r0)))
+    return _pack_amp(amp_reg)
 
 
 # ===============================
@@ -258,11 +278,11 @@ def estimate_pitch(frame_ext: np.ndarray, sample_rate: int) -> tuple:
     N   = len(x)
     ste = float(np.mean(x ** 2))
     if ste < 1e-6:
-        return 0, False
+        return 0, False, 0.0
 
     # Lag search range: f_lo=60 Hz → max_lag, f_hi=500 Hz → min_lag
-    min_lag = max(1,  int(sample_rate / 500))   # 20 @ 10 kHz
-    max_lag = min(N - 1, int(sample_rate / 60)) # 166 @ 10 kHz
+    min_lag = max(1,  int(sample_rate / args.fmax))   # 20 @ 10 kHz
+    max_lag = min(N - 1, int(sample_rate / args.fmin)) # 166 @ 10 kHz
 
     # NSDF via FFT autocorrelation (O(N log N))
     # Zero-pad to avoid circular wrap-around
@@ -288,11 +308,9 @@ def estimate_pitch(frame_ext: np.ndarray, sample_rate: int) -> tuple:
     # Find the best peak in the lag search range.
     # McLeod: take the highest peak above a threshold AFTER the first
     # zero-crossing (i.e., after the parabolic "trough" near lag 0).
-    VOICED_THRESH = 0.45   # minimum NSDF peak to be called voiced
-
     nsdf_range = nsdf[min_lag:max_lag + 1]
-    if nsdf_range.max() < VOICED_THRESH:
-        return 0, False
+    if nsdf_range.max() < args.voiced_thresh:
+        return 0, False, float(nsdf_range.max())
 
     # Find the first zero-crossing from positive to negative, then look
     # for peaks after it so we skip the central lobe.
@@ -301,8 +319,8 @@ def estimate_pitch(frame_ext: np.ndarray, sample_rate: int) -> tuple:
     search_start = int(zero_cross[0]) + 1 if len(zero_cross) else 0
 
     sub = nsdf_range[search_start:]
-    if len(sub) == 0 or sub.max() < VOICED_THRESH:
-        return 0, False
+    if len(sub) == 0 or sub.max() < args.voiced_thresh:
+        return 0, False, float(nsdf_range.max())
 
     best_lag = min_lag + search_start + int(np.argmax(sub))
     f0_hz    = float(sample_rate) / best_lag
@@ -312,18 +330,18 @@ def estimate_pitch(frame_ext: np.ndarray, sample_rate: int) -> tuple:
     # lag is likely the 2nd harmonic, not the fundamental.  Prefer the longer
     # period (lower F0) whenever the doubled lag is still in range and its
     # NSDF value clears the voiced threshold.
-    SUBOCTAVE_THRESH = 0.40
     for _ in range(2):          # up to 2 doublings (×4 in period)
         double_lag = best_lag * 2
-        if double_lag > max_lag:
+        if double_lag > max_lag or double_lag >= len(nsdf):
+#        if double_lag > max_lag:
             break
-        if nsdf[double_lag] >= SUBOCTAVE_THRESH:
+        if nsdf[double_lag] >= args.suboctave_thresh:
             best_lag = double_lag
             f0_hz    = float(sample_rate) / best_lag
         else:
             break
 
-    return f0_hz, True
+    return f0_hz, True, float(nsdf[best_lag])
 
 
 # ===============================
@@ -336,19 +354,20 @@ def analyze_lpc(window: np.ndarray, pitch_enc: int) -> tuple:
     Returns (sections, freqs) where sections is a list of (B_byte, F_byte)
     and freqs is a list of Hz values for diagnostic display.
     """
-    # Pre-emphasis
-    frame_pre = np.append(window[0], window[1:] - PRE_EMPH * window[:-1])
-
-    # Pitch pre-whitening (voiced frames only)
-    LTP_ALPHA = 0.7
-    if pitch_enc > 0 and pitch_enc < len(frame_pre):
-        whitened = frame_pre.copy()
-        whitened[pitch_enc:] -= LTP_ALPHA * frame_pre[:-pitch_enc]
+    # Pitch pre-whitening first (on the raw signal)
+    if pitch_enc > 0 and pitch_enc < len(window):
+        whitened = window.copy()
+        whitened[pitch_enc:] -= args.ltp_alpha * window[:-pitch_enc]
         frame_pre = whitened
+    else:
+        frame_pre = window.copy()
+
+    # Pre-emphasis second (on the whitened signal)
+    frame_pre = np.append(frame_pre[0], frame_pre[1:] - args.pre_emph * frame_pre[:-1])
 
     frame_win = frame_pre * np.hamming(len(frame_pre))
 
-    lpc   = lpc_levinson(frame_win, LPC_ORDER)
+    lpc, E, r0 = lpc_levinson(frame_win, LPC_ORDER)
     roots = np.roots(lpc)
     poles = find_complex_pairs(roots)
     poles.sort(key=lambda p: np.angle(p))
@@ -372,7 +391,7 @@ def analyze_lpc(window: np.ndarray, pitch_enc: int) -> tuple:
         sections.append((sp0250_quantize(0.0), sp0250_quantize(0.0)))
         freqs.append(0)
 
-    return sections, freqs
+    return sections, freqs, E, r0
 
 
 # ===============================
@@ -436,10 +455,10 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
     samples, sr = load_wav(wavfile)
 
     # Pitch window: 3× LPC_WINDOW centered on current position.
-    PITCH_HALF = LPC_WINDOW         # half-width of extended window (one side)
+    PITCH_HALF = args.lpc_window         # half-width of extended window (one side)
 
     # Pad signal so windows never go out of bounds at edges.
-    pad     = LPC_WINDOW
+    pad     = args.lpc_window
     padded  = np.concatenate([np.zeros(pad, np.float32),
                                samples,
                                np.zeros(pad, np.float32)])
@@ -462,26 +481,37 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
           f"{'1':>1}  (sentinel)", file=sys.stderr)
 
     pos = 0   # current position in encoder (10 kHz) samples
+    prev_voiced = False
+    prev_f0_hz = 100
 
     while pos < len(samples):
         # ── Analysis window (LPC + amplitude) ──────────────────────────────
         # Fixed LPC_WINDOW samples, clipped at file boundaries.
         win_start = pos
-        win_end   = min(pos + LPC_WINDOW, len(samples))
+        win_end   = min(pos + args.lpc_window, len(samples))
         window    = samples[win_start:win_end]
-        if len(window) < LPC_WINDOW:
-            window = np.pad(window, (0, LPC_WINDOW - len(window)))
+        if len(window) < args.lpc_window:
+            window = np.pad(window, (0, args.lpc_window - len(window)))
 
         rms = float(np.sqrt(np.mean(window ** 2)))
 
         # ── Pitch/V·U (wider window) ────────────────────────────────────────
         p_start  = max(0, pos - PITCH_HALF) + pad
-        p_end    = min(pos + PITCH_HALF + LPC_WINDOW, len(samples)) + pad
+        p_end    = min(pos + PITCH_HALF + args.lpc_window, len(samples)) + pad
         win_ext  = padded[p_start:p_end]
-        f0_hz, voiced = estimate_pitch(win_ext, sr)
+        f0_hz, voiced, nsdf_peak = estimate_pitch(win_ext, sr)
+        if not voiced and prev_voiced:
+            # Re-check with lower threshold to avoid mid-utterance dropout
+#            f0_hz, voiced, nsdf_peak = estimate_pitch(win_ext, sr)   # already have this
+            hold_thresh = args.voiced_thresh * 0.6   # e.g. 0.18 when thresh=0.30
+            if nsdf_peak >= hold_thresh:                   # need to expose peak from estimate_pitch
+                f0_hz = prev_f0_hz
+                voiced = True
+        prev_voiced = voiced
+        prev_f0_hz = f0_hz
 
         # ── Emit frame ──────────────────────────────────────────────────────
-        if rms < SILENCE_THRESHOLD:
+        if rms < args.silence_thresh:
             fb = make_silent_frame()
             advance  = UNVOICED_ADVANCE
             diag_t   = 'S'
@@ -491,9 +521,9 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
             diag_f   = []
 
         elif not voiced:
-            sections, freqs = analyze_lpc(window, 0)
-            amp_byte        = encode_amplitude(window)
-            fb              = make_unvoiced_frame(sections, amp_byte)
+            sections, freqs, E, r0 = analyze_lpc(window, 0)
+            amp_byte                = encode_amplitude(window, E, r0, 0, False)
+            fb                      = make_unvoiced_frame(sections, amp_byte)
             advance         = UNVOICED_ADVANCE
             diag_t          = 'U'
             diag_pit        = UNVOICED_PITCH_DEC
@@ -506,9 +536,9 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
             pitch_enc = max(1, int(round(sr           / f0_hz)))
             pitch_dec = max(1, min(255, int(round(DECODER_RATE / f0_hz))))
 
-            sections, freqs = analyze_lpc(window, pitch_enc)
-            amp_byte        = encode_amplitude(window)
-            fb              = make_voiced_frame(sections, amp_byte, pitch_dec)
+            sections, freqs, E, r0 = analyze_lpc(window, pitch_enc)
+            amp_byte                = encode_amplitude(window, E, r0, pitch_enc, True)
+            fb                      = make_voiced_frame(sections, amp_byte, pitch_dec)
             advance         = pitch_enc
             diag_t          = 'V'
             diag_pit        = pitch_dec
@@ -540,16 +570,17 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
           file=sys.stderr)
 
     # Hex dump
-    print(f"\n{'Fr':>4}  B1 F1 Am B2 F2 Pt B3 F3 RV B4 F4 B5 F5 B6 F6",
-          file=sys.stderr)
-    print("-" * 52, file=sys.stderr)
-    with open(outfile, 'rb') as f:
-        for ix in range(len(output_frames)):
-            chunk = f.read(15)
-            if len(chunk) < 15:
-                break
-            print(f"{ix:4d}  " + ' '.join(f'{b:02x}' for b in chunk),
-                  file=sys.stderr)
+    if args.debug:
+        print(f"\n{'Fr':>4}  B1 F1 Am B2 F2 Pt B3 F3 RV B4 F4 B5 F5 B6 F6",
+              file=sys.stderr)
+        print("-" * 52, file=sys.stderr)
+        with open(outfile, 'rb') as f:
+            for ix in range(len(output_frames)):
+                chunk = f.read(15)
+                if len(chunk) < 15:
+                    break
+                print(f"{ix:4d}  " + ' '.join(f'{b:02x}' for b in chunk),
+                      file=sys.stderr)
 
 
 # ===============================
@@ -565,5 +596,14 @@ if __name__ == "__main__":
     )
     parser.add_argument("input",  help="Input WAV (any rate, mono 16-bit PCM)")
     parser.add_argument("output", help="Output binary file (.lpc / .bin)")
+    parser.add_argument('--debug', action='store_true', help='enable diagnostic logging')
+    parser.add_argument('--ltp_alpha', type=float, default=0.7, help='Pitch pre-whitening (voiced frames only)')
+    parser.add_argument('--voiced_thresh', type=float, default=0.45, help='Minimum NSDF peak to be called voiced')
+    parser.add_argument('--suboctave_thresh', type=float, default=0.40, help='')
+    parser.add_argument('--fmax', type=int, default=500, help='')
+    parser.add_argument('--fmin', type=int, default=60, help='')
+    parser.add_argument('--pre_emph', type=float, default=0.97, help='')
+    parser.add_argument('--silence_thresh',  type=float, default=0.015, help='')
+    parser.add_argument('--lpc_window', type=int, default=200, help='')
     args = parser.parse_args()
     encode_wav_to_sp0250(args.input, args.output)
