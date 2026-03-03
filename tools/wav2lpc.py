@@ -556,6 +556,14 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
         frame_idx += 1
         pos       += advance
 
+    # trim leading silence
+    while len(output_frames) > 0 and output_frames[0][2] == 0x00:
+        output_frames.pop(0)
+
+    # trim trailing silence
+    while len(output_frames) > 0 and output_frames[-1][2] == 0x00:
+        output_frames.pop()
+
     # End-of-utterance null frame
     output_frames.append(b'\x00' * 15)
 
