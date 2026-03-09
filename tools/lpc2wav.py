@@ -71,8 +71,9 @@ class SP0250:
 
         self.pcount = 0
         self.rcount = 0
-        for f in self.filters:
-            f['z1'] = f['z2'] = 0.0 # Reset filter memory for new frame
+        # this helps remove pops in playback, but real hardware doesn't do this
+        # for f in self.filters:
+        #     f['z1'] = f['z2'] = 0.0 # Reset filter memory for new frame
 
     def generate_samples(self):
         samples = []
