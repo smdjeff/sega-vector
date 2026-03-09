@@ -259,7 +259,7 @@ def encode_amplitude(frame: np.ndarray, E: float, r0: float,
       r0 = input energy of the analysis frame (r[0] from autocorrelation)
       E  = Levinson-Durbin prediction error (residual energy)
 
-    sega2wav output pipeline:  z_out = amp_reg * H * 8  (then stored as int16)
+    lpc2wav output pipeline:  z_out = amp_reg * H * 8  (then stored as int16)
     We want:  output_rms_float == source_rms
     So:       amp_reg * sqrt(r0/E) * 8 / 32768 == source_rms   [unvoiced]
               amp_reg * sqrt(r0/(E*P)) * 8 / 32768 == source_rms [voiced, period P]
@@ -452,22 +452,23 @@ def make_silent_frame() -> bytes:
     return b'\x00\x00\x00\x00\x00\x40\x00\x00\x41\x00\x00\x00\x00\x00\x00'
 
 def make_unvoiced_frame(sections, amp_byte: int) -> bytes:
-    """Unvoiced: pitch=64, repeat=1, voiced=False.
-    
+    """
     Vintage ROM pattern: only F1, F4, F6 active for unvoiced.
     F2, F3, F5 (sections 1, 2, 4) are zeroed - broadband noise
     doesn't need precise mid-frequency formants.
     """
-    ZERO = (sp0250_quantize(0.0), sp0250_quantize(0.0))
-    sparse_sections = [
-        sections[0],  # F1 - keep
-        ZERO,         # F2 - zero
-        ZERO,         # F3 - zero
-        sections[3],  # F4 - keep
-        ZERO,         # F5 - zero
-        sections[5],  # F6 - keep
-    ]
-    return _build_frame(sparse_sections, amp_byte, UNVOICED_PITCH_DEC, REPEAT, False)
+    # ZERO = (sp0250_quantize(0.0), sp0250_quantize(0.0))
+    # sparse_sections = [
+    #     sections[0],  # F1 - keep
+    #     ZERO,         # F2 - zero
+    #     ZERO,         # F3 - zero
+    #     sections[3],  # F4 - keep
+    #     ZERO,         # F5 - zero
+    #     sections[5],  # F6 - keep
+    # ]
+    # return _build_frame(sparse_sections, amp_byte, UNVOICED_PITCH_DEC, REPEAT, False)
+    # key observation: less authentic to vintage, this actually sounds better
+    return _build_frame(sections, amp_byte, UNVOICED_PITCH_DEC, REPEAT, False)
 
 def make_voiced_frame(sections, amp_byte: int, pitch_dec: int) -> bytes:
     """Voiced: actual pitch period (decoder samples), repeat=1, voiced=True."""
@@ -562,14 +563,19 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
     while len(output_frames) > 0 and output_frames[0][0] == 0x00 and output_frames[0][5] != 0xFF:
         output_frames.pop(0)
 
-    # # collapse repeats in-place
-    # i = 0
-    # while i < len(output_frames) - 1:
-    #     a, b = output_frames[i], output_frames[i+1]
-    #     if a[:8] == b[:8] and a[9:] == b[9:] and (a[8] & 0x3F) < 0x3F:
-    #         f = bytearray(a); f[8] += 1; output_frames[i] = bytes(f); output_frames.pop(i+1)
-    #     else:
-    #         i += 1
+    # collapse repeats in-place
+    repeats = 0
+    if not args.no_collapse:
+        i = 0
+        while i < len(output_frames) - 1:
+            a, b = output_frames[i], output_frames[i+1]
+            if a[:8] == b[:8] and a[9:] == b[9:] and (a[8] & 0x3F) < 0x3F:
+                f = bytearray(a); f[8] += 1; output_frames[i] = bytes(f); output_frames.pop(i+1)
+                repeats += 1
+            else:
+                i += 1
+        if not args.quiet:
+            print(f'  Collapsed {repeats} repeat frames')
 
     # trim trailing silence
     while len(output_frames) > 0 and output_frames[-1][0] == 0x00:
@@ -620,5 +626,7 @@ if __name__ == "__main__":
     parser.add_argument('--pre_emph', type=float, default=0.97, help='')
     parser.add_argument('--silence_thresh',  type=float, default=0.015, help='')
     parser.add_argument('--lpc_window', type=int, default=200, help='')
+    parser.add_argument('--no_collapse', action='store_true', help='disable repeat frames')
+
     args = parser.parse_args()
     encode_wav_to_sp0250(args.input, args.output)
