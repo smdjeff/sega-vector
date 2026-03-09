@@ -414,21 +414,28 @@ def _build_frame(sections, amp_byte: int, pitch_dec: int,
 _ZERO_SECTIONS = [(sp0250_quantize(0.0), sp0250_quantize(0.0))] * NUM_SECTIONS
 
 def make_sentinel_frame() -> bytes:
-    """Start-of-utterance: pitch=255, voiced=True, amp=0."""
-    return _build_frame(_ZERO_SECTIONS, 0x00, 255, REPEAT, True)
+    return b'\x00\x00\x00\x00\x00\xFF\x00\x00\x41\x00\x00\x00\x00\x00\x00'
 
 def make_silent_frame() -> bytes:
-    """
-    Silent frame matching original Sega convention:
-    voiced=True, pitch=64 (decoder), amp=0.
-    The voiced flag with zero amplitude produces clean silence while
-    keeping the decoder's filter state stable for smooth transitions.
-    """
-    return _build_frame(_ZERO_SECTIONS, 0x00, UNVOICED_PITCH_DEC, REPEAT, True)
+    return b'\x00\x00\x00\x00\x00\x40\x00\x00\x41\x00\x00\x00\x00\x00\x00'
 
 def make_unvoiced_frame(sections, amp_byte: int) -> bytes:
-    """Unvoiced: pitch=64, repeat=1, voiced=False."""
-    return _build_frame(sections, amp_byte, UNVOICED_PITCH_DEC, REPEAT, False)
+    """Unvoiced: pitch=64, repeat=1, voiced=False.
+    
+    Vintage ROM pattern: only F1, F4, F6 active for unvoiced.
+    F2, F3, F5 (sections 1, 2, 4) are zeroed - broadband noise
+    doesn't need precise mid-frequency formants.
+    """
+    ZERO = (sp0250_quantize(0.0), sp0250_quantize(0.0))
+    sparse_sections = [
+        sections[0],  # F1 - keep
+        ZERO,         # F2 - zero
+        ZERO,         # F3 - zero
+        sections[3],  # F4 - keep
+        ZERO,         # F5 - zero
+        sections[5],  # F6 - keep
+    ]
+    return _build_frame(sparse_sections, amp_byte, UNVOICED_PITCH_DEC, REPEAT, False)
 
 def make_voiced_frame(sections, amp_byte: int, pitch_dec: int) -> bytes:
     """Voiced: actual pitch period (decoder samples), repeat=1, voiced=True."""
@@ -476,9 +483,9 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
     frame_idx     = 0
 
     # Start-of-utterance sentinel
-    output_frames.append(make_sentinel_frame())
-    print(f"{'  S':>4}  {'---':>7}  {'*':>1}  {'  0':>4}  {'255':>4}  "
-          f"{'1':>1}  (sentinel)", file=sys.stderr)
+    # output_frames.append(make_sentinel_frame())
+    # print(f"{'  S':>4}  {'---':>7}  {'*':>1}  {'  0':>4}  {'255':>4}  "
+    #       f"{'1':>1}  (sentinel)", file=sys.stderr)
 
     pos = 0   # current position in encoder (10 kHz) samples
     prev_voiced = False
@@ -557,14 +564,24 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
         pos       += advance
 
     # trim leading silence
-    while len(output_frames) > 0 and output_frames[0][2] == 0x00:
+    while len(output_frames) > 0 and output_frames[0][0] == 0x00 and output_frames[0][5] != 0xFF:
         output_frames.pop(0)
 
+    # # collapse repeats in-place
+    # i = 0
+    # while i < len(output_frames) - 1:
+    #     a, b = output_frames[i], output_frames[i+1]
+    #     if a[:8] == b[:8] and a[9:] == b[9:] and (a[8] & 0x3F) < 0x3F:
+    #         f = bytearray(a); f[8] += 1; output_frames[i] = bytes(f); output_frames.pop(i+1)
+    #     else:
+    #         i += 1
+
     # trim trailing silence
-    while len(output_frames) > 0 and output_frames[-1][2] == 0x00:
+    while len(output_frames) > 0 and output_frames[-1][0] == 0x00:
         output_frames.pop()
 
     # End-of-utterance null frame
+    # output_frames.append(make_sentinel_frame())    
     output_frames.append(b'\x00' * 15)
 
     with open(outfile, 'wb') as f:
