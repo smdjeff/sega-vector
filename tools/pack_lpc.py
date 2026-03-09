@@ -55,11 +55,11 @@ def pack_lpc_files(input_dir, output_prefix):
     if len(full_package) > MAX_SIZE:
         raise ValueError(f"ERROR: Padded size ({len(full_package)}) exceeds MAX_SIZE ({MAX_SIZE})")
 
-    # 6. Diagnostic Table (Updated with Size)
-    print(f"\n{'Index':<7} | {'Offset':<10} | {'Size (B)':<10} | {'Filename'}")
-    print("-" * 60)
+    # 6. Diagnostic Table (Updated with Size and ROM)
+    print(f"\n{'Index':<7} | {'Offset':<10} | {'Size (B)':<10} | {'ROM(s)':<10} | {'Filename'}")
+    print("-" * 72)
     # Print the Null Index
-    print(f"[{0:02}]     | {hex(offsets[0]):<10} | {'-':<10} | Reserved/Null")
+    print(f"[{0:02}]     | {hex(offsets[0]):<10} | {'-':<10} | {'-':<10} | Reserved/Null")
     
     # Print the Files
     for i in range(1, len(offsets)):
@@ -67,9 +67,15 @@ def pack_lpc_files(input_dir, output_prefix):
         off = offsets[i]
         size = file_sizes[i-1]
         name = lpc_files[i-1]
-        print(f"[{idx:02}]     | {hex(off):<10} | {size:<10} | {name}")
+        rom_start = off // CHUNK_SIZE + 1
+        rom_end = (off + size - 1) // CHUNK_SIZE + 1
+        if rom_start == rom_end:
+            rom_str = str(rom_start)
+        else:
+            rom_str = f"{rom_start}-{rom_end}"
+        print(f"[{idx:02}]     | {hex(off):<10} | {size:<10} | {rom_str:<10} | {name}")
     
-    print("-" * 60)
+    print("-" * 72)
     print(f"Total Package: {len(full_package)} bytes ({len(full_package)//CHUNK_SIZE} ROMs)")
     print(f"Free Space:    {MAX_SIZE - len(full_package)} bytes\n")
 
