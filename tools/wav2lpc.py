@@ -94,6 +94,40 @@ def sp0250_quantize(value: float) -> int:
     return (sign << 7) | idx
 
 
+def _decode_gc(byte_val: int) -> float:
+    """Decode SP0250 coefficient byte to float."""
+    sign = 1.0 if (byte_val & 0x80) else -1.0
+    idx = byte_val & 0x7F
+    if idx >= len(SP0250_ROM):
+        idx = len(SP0250_ROM) - 1
+    return sign * SP0250_ROM[idx]
+
+
+def _decode_ga(byte_val: int) -> int:
+    """Decode SP0250 amplitude byte to linear value."""
+    exp = (byte_val >> 5) & 0x07
+    mantissa = byte_val & 0x1F
+    return mantissa << exp
+
+
+def _parse_frame(chunk: bytes) -> dict:
+    """Parse a 15-byte SP0250 frame into its components."""
+    return {
+        'filters': [
+            {'B': _decode_gc(chunk[0]), 'F': _decode_gc(chunk[1])},
+            {'B': _decode_gc(chunk[3]), 'F': _decode_gc(chunk[4])},
+            {'B': _decode_gc(chunk[6]), 'F': _decode_gc(chunk[7])},
+            {'B': _decode_gc(chunk[9]), 'F': _decode_gc(chunk[10])},
+            {'B': _decode_gc(chunk[11]), 'F': _decode_gc(chunk[12])},
+            {'B': _decode_gc(chunk[13]), 'F': _decode_gc(chunk[14])},
+        ],
+        'amp': _decode_ga(chunk[2]),
+        'pitch': chunk[5],
+        'repeat': chunk[8] & 0x3F,
+        'voiced': bool(chunk[8] & 0x40),
+    }
+
+
 # ===============================
 # WAV loader + resampler
 # ===============================
@@ -114,13 +148,15 @@ def load_wav(filename: str):
         g   = gcd(SP0250_RATE, src_rate)
         up  = SP0250_RATE // g
         dn  = src_rate    // g
-        print(f"  Resampling {src_rate} Hz → {SP0250_RATE} Hz "
-              f"(up={up}, down={dn})", file=sys.stderr)
+        if not args.quiet:
+            print(f"  Resampling {src_rate} Hz → {SP0250_RATE} Hz "
+                  f"(up={up}, down={dn})", file=sys.stderr)
         samples = resample_poly(samples, up, dn).astype(np.float32)
 
     # Peak normalize to safe headroom
     peak = np.max(np.abs(samples))
-    print(f"  Normalizing volume {peak:.2f} → {NORMAL_VOLUME}", file=sys.stderr)
+    if not args.quiet:
+        print(f"  Normalizing volume {peak:.2f} → {NORMAL_VOLUME}", file=sys.stderr)
     if peak > 0:
         samples *= (NORMAL_VOLUME / peak)
 
@@ -205,8 +241,6 @@ def enforce_constraints(F_t: float, B_t: float) -> tuple:
 
 def _pack_amp(linear: int) -> int:
     """Pack an integer amplitude into the SP0250 5-bit mantissa + 3-bit exponent byte."""
-    if linear > 3968:
-        print(f"warning: clipping {linear}")
     linear = max(0, min(linear, 3968))
     if linear == 0:
         return 0
@@ -413,8 +447,6 @@ def _build_frame(sections, amp_byte: int, pitch_dec: int,
 # Null sections for silent/unvoiced frames (all coefficients zero)
 _ZERO_SECTIONS = [(sp0250_quantize(0.0), sp0250_quantize(0.0))] * NUM_SECTIONS
 
-def make_sentinel_frame() -> bytes:
-    return b'\x00\x00\x00\x00\x00\xFF\x00\x00\x41\x00\x00\x00\x00\x00\x00'
 
 def make_silent_frame() -> bytes:
     return b'\x00\x00\x00\x00\x00\x40\x00\x00\x41\x00\x00\x00\x00\x00\x00'
@@ -456,7 +488,6 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
                   pitch stored in decoder samples (9286 Hz)
       • Unvoiced: pitch=64, voiced=False, advance 69 encoder samples
       • Silent:   pitch=64, voiced=True, amp=0, advance 69 encoder samples
-      • Header:   one sentinel frame (pitch=255, voiced=True, amp=0)
       • Footer:   one all-zero null frame (end-of-utterance)
     """
     samples, sr = load_wav(wavfile)
@@ -470,23 +501,7 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
                                samples,
                                np.zeros(pad, np.float32)])
 
-    print(f"Input:  {wavfile}  ({sr} Hz, {len(samples)} samples, "
-          f"{len(samples)/sr*1000:.0f} ms)", file=sys.stderr)
-
-    header = (f"\n{'Fr':>4}  {'RMS':>7}  {'T':>1}  {'Amp':>4}  "
-              f"{'PitD':>4}  {'V':>1}  "
-              f"{'F1':>5}  {'F2':>5}  {'F3':>5}  {'F4':>5}  {'F5':>5}  {'F6':>5}")
-    print(header, file=sys.stderr)
-    print("-" * 75, file=sys.stderr)
-
     output_frames = []
-    frame_idx     = 0
-
-    # Start-of-utterance sentinel
-    # output_frames.append(make_sentinel_frame())
-    # print(f"{'  S':>4}  {'---':>7}  {'*':>1}  {'  0':>4}  {'255':>4}  "
-    #       f"{'1':>1}  (sentinel)", file=sys.stderr)
-
     pos = 0   # current position in encoder (10 kHz) samples
     prev_voiced = False
     prev_f0_hz = 100
@@ -520,47 +535,27 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
         # ── Emit frame ──────────────────────────────────────────────────────
         if rms < args.silence_thresh:
             fb = make_silent_frame()
-            advance  = UNVOICED_ADVANCE
-            diag_t   = 'S'
-            diag_pit = UNVOICED_PITCH_DEC
-            diag_v   = 1
-            diag_amp = 0
-            diag_f   = []
+            advance = UNVOICED_ADVANCE
 
         elif not voiced:
             sections, freqs, E, r0 = analyze_lpc(window, 0)
-            amp_byte                = encode_amplitude(window, E, r0, 0, False)
-            fb                      = make_unvoiced_frame(sections, amp_byte)
-            advance         = UNVOICED_ADVANCE
-            diag_t          = 'U'
-            diag_pit        = UNVOICED_PITCH_DEC
-            diag_v          = 0
-            diag_amp        = (amp_byte & 0x1F) << ((amp_byte >> 5) & 7)
-            diag_f          = freqs
+            amp_byte = encode_amplitude(window, E, r0, 0, False)
+            fb = make_unvoiced_frame(sections, amp_byte)
+            advance = UNVOICED_ADVANCE
 
         else:
             # Convert F0 to pitch period in encoder samples and decoder samples
-            pitch_enc = max(1, int(round(sr           / f0_hz)))
+            pitch_enc = max(1, int(round(sr / f0_hz)))
             pitch_dec = max(1, min(255, int(round(DECODER_RATE / f0_hz))))
 
             sections, freqs, E, r0 = analyze_lpc(window, pitch_enc)
-            amp_byte                = encode_amplitude(window, E, r0, pitch_enc, True)
-            fb                      = make_voiced_frame(sections, amp_byte, pitch_dec)
-            advance         = pitch_enc
-            diag_t          = 'V'
-            diag_pit        = pitch_dec
-            diag_v          = 1
-            diag_amp        = (amp_byte & 0x1F) << ((amp_byte >> 5) & 7)
-            diag_f          = freqs
+            amp_byte = encode_amplitude(window, E, r0, pitch_enc, True)
+            fb = make_voiced_frame(sections, amp_byte, pitch_dec)
+            advance = pitch_enc
 
         assert len(fb) == 15
         output_frames.append(fb)
 
-        fstr = '  '.join(f'{hz:5d}' for hz in diag_f) if diag_f else ''
-        print(f"{frame_idx:4d}  {rms:7.4f}  {diag_t:>1}  {diag_amp:4d}  "
-              f"{diag_pit:4d}  {diag_v}  {fstr}", file=sys.stderr)
-
-        frame_idx += 1
         pos       += advance
 
     # trim leading silence
@@ -581,31 +576,26 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
         output_frames.pop()
 
     # End-of-utterance null frame
-    # output_frames.append(make_sentinel_frame())    
     output_frames.append(b'\x00' * 15)
 
     with open(outfile, 'wb') as f:
         for fb in output_frames:
             f.write(fb)
 
-    n_speech = len(output_frames) - 2  # exclude sentinel and null
-    total    = len(output_frames) * 15
-    print(f"\nOutput: {outfile}  "
-          f"({n_speech} speech frames + sentinel + null = {total} bytes)",
-          file=sys.stderr)
+    if not args.quiet:
+        header = (f"\n{'Fr':>4}  {'Amp':>4}  "
+                  f"{'PitD':>4}  {'V':>1}  "
+                  f"{'F1':>9}  {'F2':>9}  {'F3':>9}  {'F4':>9}  {'F5':>9}  {'F6':>9}")
+        print(header, file=sys.stderr)
+        print("-" * 85, file=sys.stderr)
 
-    # Hex dump
-    if args.debug:
-        print(f"\n{'Fr':>4}  B1 F1 Am B2 F2 Pt B3 F3 RV B4 F4 B5 F5 B6 F6",
-              file=sys.stderr)
-        print("-" * 52, file=sys.stderr)
         with open(outfile, 'rb') as f:
             for ix in range(len(output_frames)):
                 chunk = f.read(15)
-                if len(chunk) < 15:
-                    break
-                print(f"{ix:4d}  " + ' '.join(f'{b:02x}' for b in chunk),
-                      file=sys.stderr)
+                frame = _parse_frame(chunk)
+                coeffs_str = "  ".join([f"{int(flt['F']*1000):4d} {int(flt['B']*1000):4d}" for flt in frame['filters']])
+                print(f"{ix:4d}  {frame['amp']:4d}  "
+                      f"{frame['pitch']:4d}  {int(frame['voiced']):>1}  {coeffs_str}", file=sys.stderr)
 
 
 # ===============================
@@ -621,7 +611,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("input",  help="Input WAV (any rate, mono 16-bit PCM)")
     parser.add_argument("output", help="Output binary file (.lpc / .bin)")
-    parser.add_argument('--debug', action='store_true', help='enable diagnostic logging')
+    parser.add_argument('--quiet', action='store_true', help='disable diagnostic logging')    
     parser.add_argument('--ltp_alpha', type=float, default=0.7, help='Pitch pre-whitening (voiced frames only)')
     parser.add_argument('--voiced_thresh', type=float, default=0.45, help='Minimum NSDF peak to be called voiced')
     parser.add_argument('--suboctave_thresh', type=float, default=0.40, help='')

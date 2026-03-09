@@ -144,7 +144,6 @@ def convert_bin_to_wav(input_file, output_file):
         wav_file.setframerate(9286) # Based on 3.12MHz / 336 in MAME
         wav_file.writeframes(audio_data.astype(np.int16).tobytes())
     
-    print(f"\nSaved to {output_file}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
