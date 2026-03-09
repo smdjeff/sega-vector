@@ -250,8 +250,30 @@ def _pack_amp(linear: int) -> int:
     return ((exp & 0x07) << 5) | (min(linear >> exp, 31) & 0x1F)
 
 
+def _estimate_cascade_gain(sections) -> float:
+    """
+    Estimate overflow risk from the most resonant filter section.
+
+    Each section is a 2nd-order IIR with pole radius r = sqrt(|B_t|).
+    Peak gain at resonance ≈ 1/(1 − r²) = 1/(1 − |B_t|).
+
+    Since sections resonate at different frequencies, multiplying all 6
+    peak gains together vastly overestimates the actual output level.
+    The single most resonant section dominates the impulse response peak,
+    so we use the max section gain as the overflow proxy.
+    """
+    max_gain = 1.0
+    for B_byte, F_byte in sections:
+        B_val = abs(_decode_gc(B_byte))   # |B_t| ≈ r²
+        section_gain = 1.0 / max(0.01, 1.0 - B_val)
+        if section_gain > max_gain:
+            max_gain = section_gain
+    return max_gain
+
+
 def encode_amplitude(frame: np.ndarray, E: float, r0: float,
-                     pitch_enc: int, voiced: bool) -> int:
+                     pitch_enc: int, voiced: bool,
+                     sections=None) -> int:
     """
     Compute the SP0250 amplitude register from the LPC filter gain.
 
@@ -278,6 +300,23 @@ def encode_amplitude(frame: np.ndarray, E: float, r0: float,
         amp_reg = int(round(source_rms * 4096.0 * np.sqrt(E * pitch_enc / r0)))
     else:
         amp_reg = int(round(source_rms * 4096.0 * np.sqrt(E / r0)))
+
+    # ── Gain compensation: scale amplitude down on resonant frames ────────
+    # The most resonant filter section amplifies the excitation signal.
+    # If amp × max_section_gain would overflow the SP0250 integer output
+    # path (z0 * 8 → int16), it creates pops.  Only frames where BOTH
+    # amplitude is high AND a filter section is very resonant get reduced.
+    #
+    # Calibration: vintage Sega ROMs peak at amp × max_gain ≈ 30 000
+    # (e.g. amp=1792, max section gain=16.9).  Default threshold of
+    # 40 000 gives headroom above vintage while clamping problem frames
+    # (which can reach 60 000+).
+    if sections is not None and amp_reg > 0:
+        cascade_gain = _estimate_cascade_gain(sections)
+        product = amp_reg * cascade_gain
+        if product > args.max_amp_gain:
+            amp_reg = int(round(args.max_amp_gain / cascade_gain))
+
     return _pack_amp(amp_reg)
 
 
@@ -540,7 +579,7 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
 
         elif not voiced:
             sections, freqs, E, r0 = analyze_lpc(window, 0)
-            amp_byte = encode_amplitude(window, E, r0, 0, False)
+            amp_byte = encode_amplitude(window, E, r0, 0, False, sections)
             fb = make_unvoiced_frame(sections, amp_byte)
             advance = UNVOICED_ADVANCE
 
@@ -550,7 +589,7 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
             pitch_dec = max(1, min(255, int(round(DECODER_RATE / f0_hz))))
 
             sections, freqs, E, r0 = analyze_lpc(window, pitch_enc)
-            amp_byte = encode_amplitude(window, E, r0, pitch_enc, True)
+            amp_byte = encode_amplitude(window, E, r0, pitch_enc, True, sections)
             fb = make_voiced_frame(sections, amp_byte, pitch_dec)
             advance = pitch_enc
 
@@ -618,7 +657,7 @@ if __name__ == "__main__":
     parser.add_argument("input",  help="Input WAV (any rate, mono 16-bit PCM)")
     parser.add_argument("output", help="Output binary file (.lpc / .bin)")
     parser.add_argument('--quiet', action='store_true', help='disable diagnostic logging')    
-    parser.add_argument('--ltp_alpha', type=float, default=0.7, help='Pitch pre-whitening (voiced frames only)')
+    parser.add_argument('--ltp_alpha', type=float, default=0.3, help='Pitch pre-whitening (voiced frames only)')
     parser.add_argument('--voiced_thresh', type=float, default=0.45, help='Minimum NSDF peak to be called voiced')
     parser.add_argument('--suboctave_thresh', type=float, default=0.40, help='')
     parser.add_argument('--fmax', type=int, default=500, help='')
@@ -627,6 +666,7 @@ if __name__ == "__main__":
     parser.add_argument('--silence_thresh',  type=float, default=0.015, help='')
     parser.add_argument('--lpc_window', type=int, default=200, help='')
     parser.add_argument('--no_collapse', action='store_true', help='disable repeat frames')
+    parser.add_argument('--max_amp_gain', type=float, default=15000.0, help='max amp×max_section_gain before per-frame reduction (vintage peaks ~30K, try 30000-60000)')
 
     args = parser.parse_args()
     encode_wav_to_sp0250(args.input, args.output)
