@@ -1,39 +1,26 @@
-# sega-g80-vector-homebrew
+# sega-g80-vector Star Trek 2
 
-## A new game written for a vintage 1982 vector arcade machine
+# A new game written for a vintage Sega 1982 vector arcade machine
 
-![screenshot](screenshot.jpg)
-* Follow the development progress on [YouTube shorts](https://youtube.com/playlist?list=PL5WwuS3ViybqfLWkKmgaT5_N2kVawZYZk)
-* Not emulated, not MAME, no Raspberry Pi, no Teensy, no ESP32, no kidding.
-* Runs as it would have in 1982 on the original Sega G80 boardsets
-* Runs on a Zilog Z80 at 3.86712 MHz, less than 32KB ROM and 2KB RAM
-* Integrates with the Sega XY vector coprocessor (a two board set of 74k logic)
-* Programmed in C rather than period correct Z80 assembly
-* Loads and works with 8035 CPUs on the sound and speech boards
-* Burn directly to 2716 ROMs and run in the real game
-* Can also run without hardware, just copy over the StarTrek MAME ROMs
+# Installation
+* The build folder contains a zip file with all the ROMs necessary to run the game
+  
+## Running in MAME
+* Simply point MAME to the build/zip and run
+* _Note: additional speech data may be needed._ Modify mame/segag80v.cpp and rebuild
+  ```
+  ROM_REGION( 0x4000, "speech:data", 0 )
+  ROM_LOAD( "1871.speech-u6",  0x0000, 0x1000, CRC(0) SHA1(0) )
+  ROM_LOAD( "1872.speech-u5",  0x1000, 0x1000, CRC(0) SHA1(0) )
+  ROM_LOAD( "187x.speech-u4",  0x2000, 0x1000, CRC(0) SHA1(0) )
+  ROM_LOAD( "187x.speech-u3",  0x3000, 0x1000, CRC(0) SHA1(0) )
+  ```
 
-# Building the ROM yourself
-```
-export PATH=${PATH}:/Users/jmathews/Desktop/z88dk/bin
-export ZCCCFG=/Users/jmathews/Desktop/z88dk/lib/config
-make
-```
-## Dependencies
-* https://github.com/z88dk/z88dk/releases
-* export PATH=${PATH}:/Users/jmathews/Desktop/z88dk/bin
-* export ZCCCFG=/Users/jmathews/Desktop/z88dk/lib/config
-* ROM Emulator https://github.com/Kris-Sekula/EPROM-EMU-NG/
+## Running on Real Sega G80 Hardware
+1. Burn and load 1670.speech-u7 into Speech Board's 8035 CPU  _Note: occasionally named 1607_ 
+2. Burn and load 1871.speech-u6 through 187x.speech-u3 into Speech Board's Data
+4. Burn and load 1873.cpu-u25 into Main board's Z80 CPU
+5. Burn and load 1848.prom-u1 through 1870.prom-u23 into ROM board  _Note: Only those with a recent date are actually required_
 
-# Bonus tooling
-Dump the vectors from the factory ROMs
-
-Or create complex vectors in your favorite SVG editor and convert to Sega vector format
-```
-python3 ./sega2svg.py
-python3 ./svg2sega.py
-```
-
-![screenshot](sega.png)
-![screenshot](sega80boardset.jpg)
-
+## Enjoy!
+Follow the development progress on [YouTube shorts](https://youtube.com/playlist?list=PL5WwuS3ViybqfLWkKmgaT5_N2kVawZYZk)
