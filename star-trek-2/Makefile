@@ -1,37 +1,69 @@
-#export PATH=${PATH}:/Users/jeff/Desktop/z88dk/bin
-#export ZCCCFG=/Users/jeff/Desktop/z88dk/lib/config
+## toolchain
+# export PATH=${PATH}:/Users/jeff/Desktop/z88dk/bin
+# export ZCCCFG=/Users/jeff/Desktop/z88dk/lib/config
 # see https://github-wiki-see.page/m/z88dk/z88dk/wiki/NewLib--Platform--Embedded
-
-# ~/Downloads/dasmxx-master/src/dasmz80 dasmxx/sega.txt > dasmxx/gamerom.asm
-# minipro -p M2716@DIP24 -w /Users/jeff/Downloads/bootrom.bin  --vpp=25
-
-# patch sdcc for crt_page_zero
-# see https://www.z88dk.org/forum/viewtopic.php?t=12010
-
-all: gamerom
-
-prereq:
-	@mkdir -p build
-	@mkdir -p roms
-
-clean:
-	$(RM) -rf build
-	$(RM) -rf roms
-	$(RM) art/*.h
-	$(RM) art/font/*.h
-
+#
+## bootloader rom
 # development is made easier by loading bootrom into 1873.cpu-u25
 # then romulator can be quickly loaded to a single large rom on the ROM board
+# patch sdcc for crt_page_zero (so our bootloader rom works)
+# see https://www.z88dk.org/forum/viewtopic.php?t=12010
+#
+## rom programming
+# ~/Downloads/dasmxx-master/src/dasmz80 dasmxx/sega.txt > dasmxx/gamerom.asm
+# minipro -p M2716@DIP24 -w /Users/jeff/Downloads/bootrom.bin  --vpp=25
+#
+## hardware flashing
+# ROM Emulator https://github.com/Kris-Sekula/EPROM-EMU-NG/
+# python3 -m pip install serial
+# python3 -m pip install PySimpleGUI
+# brew install python-tk
+
+# --- Build directories
+BUILD_DIR        := build
+ART_BUILD_DIR    := $(BUILD_DIR)/art
+SPEECH_BUILD_DIR := $(BUILD_DIR)/speech
+
+# --- Art
+SVGS_ROOT := $(wildcard art/*.svg)
+SVGS_FONT := $(wildcard art/font/*.svg)
+HDRS_ROOT := $(patsubst art/%.svg, $(ART_BUILD_DIR)/%.h, $(SVGS_ROOT))
+HDRS_FONT := $(patsubst art/font/%.svg, $(ART_BUILD_DIR)/%.h, $(SVGS_FONT))
+HDRS      := $(HDRS_ROOT) $(HDRS_FONT)
+
+# --- Speech 
+SPEECH_SOURCES := $(wildcard speech/*.wav)
+LPC_TARGETS    := $(patsubst speech/%.wav, $(SPEECH_BUILD_DIR)/%.lpc, $(SPEECH_SOURCES))
+
+# --- Compiler & Tool Definitions ---
+MAME   = /Users/jeff/Downloads/mame-master/mame
+SOURCE = main.c font.c math.c usb.c vector.c
 
 CFLAGS = -DENABLE_BOOTROM
 CFLAGS += -DMAME_BUILD
+CFLAGS += -I$(ART_BUILD_DIR)/..
 
-#MAME = mame
-MAME = /Users/jmathews/Downloads/mame-master/mamed
+# --- Main Targets
 
-gamerom: prereq bootrom art_headers
+all: gamerom
+
+.PHONY: all art speech clean prereq flash mame roms bootrom
+
+prereq:
+	@mkdir -p $(BUILD_DIR)
+	@mkdir -p $(ART_BUILD_DIR)
+	@mkdir -p $(SPEECH_BUILD_DIR)
+	@mkdir -p roms
+
+clean:
+	$(RM) -rf $(BUILD_DIR)
+	$(RM) -rf roms
+
+# --- Compilation Targets
+
+gamerom: prereq bootrom speech art
 	@echo "building 32k rom at 0x800 for use with sega-boot-rom in cpu rom socket"
-	zcc +z80 --list -m -vn -SO3 -compiler=sdcc -startup=1 font.c math.c main.c usb.c -o $@ -create-app $(CFLAGS) -Cz"--rombase=0x0800 --romsize=30720"
+	zcc +z80 --list -m -vn -SO3 -compiler=sdcc -startup=1 $(SOURCE) -o $@ -create-app $(CFLAGS) -Cz"--rombase=0x0800 --romsize=30720"
 	@mv $@* build/ 2>/dev/null || true
 	@mv *.lis build/ 2>/dev/null || true
 	@printf 'ROM usage: ' && stat -f '%z' build/$@_CODE.bin
@@ -45,6 +77,8 @@ gamerom: prereq bootrom art_headers
 bootrom: prereq
 	z80asm bootrom.asm -o build/$@.bin
 	truncate -s 2K build/$@.bin
+
+# --- ROM generation
 
 roms: prereq gamerom
 	@cp build/bootrom.bin roms/1873.cpu-u25
@@ -63,37 +97,45 @@ roms: prereq gamerom
 mame: roms
 	# effectively a patch over the existing to make mame happy
 	unzip startrek.zip -d startrek
-	rsync -vt roms/* startrek
+	# bring in changes
+	rsync -vt roms/* startrek 
+	# new speech data
+	cp $(SPEECH_BUILD_DIR)/rom_0.bin startrek/1871.speech-u6
+	cp $(SPEECH_BUILD_DIR)/rom_1.bin startrek/1872.speech-u5
+	cp $(SPEECH_BUILD_DIR)/rom_2.bin startrek/187x.speech-u4
+	cp $(SPEECH_BUILD_DIR)/rom_3.bin startrek/187x.speech-u3
+	# new 8035 speech mcu driver
+	cp ../speech/main.bin startrek/1670.speech-u7
 	zip roms.zip startrek/*
 	rm -r startrek
 	mv roms.zip build/startrek.zip
 	$(MAME) -rp ./build startrek
 
+# --- art 
 
-SVGS_ROOT := $(wildcard art/*.svg)
-SVGS_FONT := $(wildcard art/font/*.svg)
-HDRS_ROOT := $(SVGS_ROOT:.svg=.h)
-HDRS_FONT := $(SVGS_FONT:.svg=.h)
-HDRS := $(HDRS_ROOT) $(HDRS_FONT)
+art: prereq $(HDRS)
 
-.PHONY: art_headers
-art_headers: $(HDRS)
+$(ART_BUILD_DIR)/%.h: art/%.svg
+	../tools/svg2sega.py --scale 0.6 --rotate 90 --speed 0 --merge 0 --rdp 1.0 --close $< > $@
 
-$(HDRS_ROOT): art/%.h: art/%.svg
-	../tools/svg2sega.py --speed 0 --merge 0 --rdp 1.0 --close $< > $@
-
-$(HDRS_FONT): art/font/%.h: art/font/%.svg
+$(ART_BUILD_DIR)/%.h: art/font/%.svg
 	../tools/svg2sega.py --scale 0.4 --rotate 90 --speed 0 --close $< > $@
 
+# --- speech 
 
-# ROM Emulator https://github.com/Kris-Sekula/EPROM-EMU-NG/
-# python3 -m pip install serial
-# python3 -m pip install PySimpleGUI
-# brew install python-tk
+speech: prereq $(LPC_TARGETS)
+	@echo "Packing LPC files into 4K chunks..."
+	python3 ../tools/pack_lpc.py $(SPEECH_BUILD_DIR) $(SPEECH_BUILD_DIR)/rom
+
+$(SPEECH_BUILD_DIR)/%.lpc: speech/%.wav
+	../tools/wav2lpc.py $< $@
+	../tools/lpc2wav.py $@ $(@:.lpc=.wav) --quiet
+	@afplay $(@:.lpc=.wav)
+
+# --- Hardware Programming
 
 PROGRAMMER = python3 ~/Downloads/EPROM_EMU_NG_2.0rc9.py
 UART = /dev/cu.usbserial-B00050RO
 
 flash:
 	 ${PROGRAMMER} -mem 27256 -spi y -auto y -start 0 build/gamerom.bin ${UART}
-
