@@ -31,8 +31,9 @@ from scipy.signal import resample_poly
 # correct SP0250 filter frequencies at playback.
 SP0250_RATE  = 9286          # encoder / analysis sample rate (Hz)
 NORMAL_VOLUME = 0.70
-LPC_ORDER    = 12
-NUM_SECTIONS = 6
+LPC_ORDER    = 12            # default; overridden by --lpc_order
+NUM_SECTIONS = LPC_ORDER // 2
+FRAME_SIZE   = 3 + LPC_ORDER # 9 header/interleave + 2*(NUM_SECTIONS-3) trailing
 
 # Pole radius limit per section (F1→F6, ascending frequency order).
 POLE_RADIUS_BY_SECTION = [0.97, 0.97, 0.93, 0.88, 0.82, 0.75]
@@ -111,16 +112,16 @@ def _decode_ga(byte_val: int) -> int:
 
 
 def _parse_frame(chunk: bytes) -> dict:
-    """Parse a 15-byte SP0250 frame into its components."""
+    """Parse an LPC frame (variable size based on NUM_SECTIONS) into its components."""
+    filters = [
+        {'B': _decode_gc(chunk[0]), 'F': _decode_gc(chunk[1])},
+        {'B': _decode_gc(chunk[3]), 'F': _decode_gc(chunk[4])},
+        {'B': _decode_gc(chunk[6]), 'F': _decode_gc(chunk[7])},
+    ]
+    for i in range(9, len(chunk), 2):
+        filters.append({'B': _decode_gc(chunk[i]), 'F': _decode_gc(chunk[i+1])})
     return {
-        'filters': [
-            {'B': _decode_gc(chunk[0]), 'F': _decode_gc(chunk[1])},
-            {'B': _decode_gc(chunk[3]), 'F': _decode_gc(chunk[4])},
-            {'B': _decode_gc(chunk[6]), 'F': _decode_gc(chunk[7])},
-            {'B': _decode_gc(chunk[9]), 'F': _decode_gc(chunk[10])},
-            {'B': _decode_gc(chunk[11]), 'F': _decode_gc(chunk[12])},
-            {'B': _decode_gc(chunk[13]), 'F': _decode_gc(chunk[14])},
-        ],
+        'filters': filters,
         'amp': _decode_ga(chunk[2]),
         'pitch': chunk[5],
         'repeat': chunk[8] & 0x3F,
@@ -474,21 +475,26 @@ def analyze_lpc(window: np.ndarray, pitch_enc: int) -> tuple:
 def _build_frame(sections, amp_byte: int, pitch_dec: int,
                  repeat: int, voiced: bool) -> bytes:
     rv = (0 << 7) | (int(voiced) << 6) | (repeat & 0x3F)
-    return bytes([
+    frame = [
         sections[0][0], sections[0][1], amp_byte,
         sections[1][0], sections[1][1], pitch_dec & 0xFF,
         sections[2][0], sections[2][1], rv,
-        sections[3][0], sections[3][1],
-        sections[4][0], sections[4][1],
-        sections[5][0], sections[5][1],
-    ])
+    ]
+    for s in sections[3:]:
+        frame.extend([s[0], s[1]])
+    return bytes(frame)
 
 # Null sections for silent/unvoiced frames (all coefficients zero)
 _ZERO_SECTIONS = [(sp0250_quantize(0.0), sp0250_quantize(0.0))] * NUM_SECTIONS
 
 
 def make_silent_frame() -> bytes:
-    return b'\x00\x00\x00\x00\x00\x40\x00\x00\x41\x00\x00\x00\x00\x00\x00'
+    """Silent frame: all filter coefficients zero, pitch=64, voiced=True, repeat=1."""
+    frame = [0x00, 0x00, 0x00,   # section 0 B/F, amp=0
+             0x00, 0x00, 0x40,   # section 1 B/F, pitch=64
+             0x00, 0x00, 0x41]   # section 2 B/F, repeat=1|voiced
+    frame.extend([0x00] * (NUM_SECTIONS - 3) * 2)
+    return bytes(frame)
 
 def make_unvoiced_frame(sections, amp_byte: int) -> bytes:
     """
@@ -593,7 +599,7 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
             fb = make_voiced_frame(sections, amp_byte, pitch_dec)
             advance = pitch_enc
 
-        assert len(fb) == 15
+        assert len(fb) == FRAME_SIZE
         output_frames.append(fb)
 
         pos       += advance
@@ -621,22 +627,23 @@ def encode_wav_to_sp0250(wavfile: str, outfile: str) -> None:
         output_frames.pop()
 
     # End-of-utterance null frame
-    output_frames.append(b'\x00' * 15)
+    output_frames.append(b'\x00' * FRAME_SIZE)
 
     with open(outfile, 'wb') as f:
         for fb in output_frames:
             f.write(fb)
 
     if not args.quiet:
+        filter_hdrs = "  ".join([f"{'F'+str(i+1):>9}" for i in range(NUM_SECTIONS)])
         header = (f"\n{'Fr':>4}  {'Amp':>4}  "
                   f"{'PitD':>4}  {'V':>1}  "
-                  f"{'F1':>9}  {'F2':>9}  {'F3':>9}  {'F4':>9}  {'F5':>9}  {'F6':>9}")
+                  f"{filter_hdrs}")
         print(header, file=sys.stderr)
-        print("-" * 85, file=sys.stderr)
+        print("-" * (25 + 11 * NUM_SECTIONS), file=sys.stderr)
 
         with open(outfile, 'rb') as f:
             for ix in range(len(output_frames)):
-                chunk = f.read(15)
+                chunk = f.read(FRAME_SIZE)
                 frame = _parse_frame(chunk)
                 coeffs_str = "  ".join([f"{int(flt['F']*1000):4d} {int(flt['B']*1000):4d}" for flt in frame['filters']])
                 print(f"{ix:4d}  {frame['amp']:4d}  "
@@ -666,7 +673,16 @@ if __name__ == "__main__":
     parser.add_argument('--silence_thresh',  type=float, default=0.015, help='')
     parser.add_argument('--lpc_window', type=int, default=200, help='')
     parser.add_argument('--no_collapse', action='store_true', help='disable repeat frames')
+    parser.add_argument('--lpc_order', type=int, default=10, choices=[8, 10, 12],
+                        help='LPC filter order (8, 10, or 12, default 10)')
     parser.add_argument('--max_amp_gain', type=float, default=15000.0, help='max amp×max_section_gain before per-frame reduction (vintage peaks ~30K, try 30000-60000)')
 
     args = parser.parse_args()
+
+    # Recompute globals from --lpc_order
+    LPC_ORDER    = args.lpc_order
+    NUM_SECTIONS = LPC_ORDER // 2
+    FRAME_SIZE   = 3 + LPC_ORDER
+    _ZERO_SECTIONS = [(sp0250_quantize(0.0), sp0250_quantize(0.0))] * NUM_SECTIONS
+
     encode_wav_to_sp0250(args.input, args.output)

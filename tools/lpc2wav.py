@@ -17,10 +17,12 @@ import wave
 import sys
 
 class SP0250:
-    def __init__(self, sample_rate=9286):
+    def __init__(self, sample_rate=9286, num_sections=6):
         self.sample_rate = sample_rate
+        self.num_sections = num_sections
+        self.frame_size = 3 + num_sections * 2
         self.rng = 1
-        self.filters = [{"F": 0, "B": 0, "z1": 0.0, "z2": 0.0} for _ in range(6)]
+        self.filters = [{"F": 0, "B": 0, "z1": 0.0, "z2": 0.0} for _ in range(num_sections)]
         self.amp = 0
         self.pitch = 0
         self.repeat = 0
@@ -47,6 +49,7 @@ class SP0250:
         return float(res if (v & 0x80) else -res)
 
     def load_frame(self, fifo, frame_idx):
+        # First 3 sections interleaved with control bytes (always present)
         self.filters[0]['B'] = self._decode_gc(fifo[0])
         self.filters[0]['F'] = self._decode_gc(fifo[1])
         self.amp             = self._decode_ga(fifo[2])
@@ -57,12 +60,11 @@ class SP0250:
         self.filters[2]['F'] = self._decode_gc(fifo[7])
         self.repeat          = fifo[8] & 0x3f
         self.voiced          = bool(fifo[8] & 0x40)
-        self.filters[3]['B'] = self._decode_gc(fifo[9])
-        self.filters[3]['F'] = self._decode_gc(fifo[10])
-        self.filters[4]['B'] = self._decode_gc(fifo[11])
-        self.filters[4]['F'] = self._decode_gc(fifo[12])
-        self.filters[5]['B'] = self._decode_gc(fifo[13])
-        self.filters[5]['F'] = self._decode_gc(fifo[14])
+        # Remaining sections packed contiguously after byte 8
+        for s in range(3, self.num_sections):
+            base = 9 + (s - 3) * 2
+            self.filters[s]['B'] = self._decode_gc(fifo[base])
+            self.filters[s]['F'] = self._decode_gc(fifo[base + 1])
         
         if not args.quiet:
             coeffs_str = "  ".join([f"{int(f['F']):4d} {int(f['B']):4d}" for f in self.filters])
@@ -108,21 +110,25 @@ class SP0250:
         return samples
 
 def convert_bin_to_wav(input_file, output_file):
-    synth = SP0250()
+    lpc_order = args.lpc_order
+    num_sections = lpc_order // 2
+    frame_size = 3 + lpc_order
+    synth = SP0250(num_sections=num_sections)
     all_samples = []
     frame_idx = 0
 
     if not args.quiet:
+        filter_hdrs = "  ".join([f"{'F'+str(i+1):>9}" for i in range(num_sections)])
         header = (f"\n{'Fr':>4}  {'Amp':>4}  "
                   f"{'PitD':>4}  {'V':>1}  "
-                  f"{'F1':>9}  {'F2':>9}  {'F3':>9}  {'F4':>9}  {'F5':>9}  {'F6':>9}")
+                  f"{filter_hdrs}")
         print(header, file=sys.stderr)
-        print("-" * 85, file=sys.stderr)
+        print("-" * (25 + 11 * num_sections), file=sys.stderr)
 
     with open(input_file, 'rb') as f:
         while True:
-            chunk = f.read(15)
-            if not chunk or len(chunk) < 15:
+            chunk = f.read(frame_size)
+            if not chunk or len(chunk) < frame_size:
                 break
             synth.load_frame(list(chunk), frame_idx)
             all_samples.extend(synth.generate_samples())
@@ -153,5 +159,7 @@ if __name__ == "__main__":
     parser.add_argument("input", help="Input binary file (.lpc / .bin)")
     parser.add_argument("output",  help="Output WAV (mono 16-bit PCM)")
     parser.add_argument('--quiet', action='store_true', help='disable diagnostic logging')
+    parser.add_argument('--lpc_order', type=int, default=10, choices=[8, 10, 12],
+                        help='LPC filter order (8, 10, or 12, default 10)')
     args = parser.parse_args()
     convert_bin_to_wav(args.input, args.output)

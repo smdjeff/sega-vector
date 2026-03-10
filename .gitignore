@@ -2,5 +2,19 @@
 *.lis
 **/dump/
 **/cfg/
+/tools/.idea
+
+/star-trek-2/roms
+!/star-trek-2/build/startrek.zip
+
+/star-trek-2/speech/unused
 
 /star-trek-2/build
+!/star-trek-2/build/art/*.h
+!/star-trek-2/build/speech/*.lpc
+!/star-trek-2/build/speech/*.bin
+tools/dump.bin
+tools/6331.speech-u30
+tools/1872.speech-u5
+tools/1871.speech-u6
+tools/1670.speech-u7

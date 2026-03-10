@@ -5,16 +5,18 @@ Packs LPC files into 2732 ROMs with an index table as a header
 
 '''
 
+import argparse
 import os
 import struct
 import sys
 
 # Constants
-MAX_SIZE = 64 * 1024  # 16KB Total Limit
-CHUNK_SIZE = 4096     # 4KB Chunk size
+CHUNK_SIZE = 4096
+MAX_SIZE = 4 * CHUNK_SIZE # 4x 2732 ROMs
 INDEX_ZERO_VAL = 0x0000
 
-def pack_lpc_files(input_dir, output_prefix):
+def pack_lpc_files(input_dir, output_prefix, lpc_order=12):
+    frame_size = 3 + lpc_order
     # 1. Gather and Sort .lpc files
     lpc_files = sorted([f for f in os.listdir(input_dir) if f.endswith('.lpc')])
     if not lpc_files:
@@ -27,6 +29,9 @@ def pack_lpc_files(input_dir, output_prefix):
     for filename in lpc_files:
         with open(os.path.join(input_dir, filename), 'rb') as f:
             data = f.read()
+            if len(data) % frame_size != 0:
+                print(f"WARNING: {filename} size {len(data)} is not a multiple of "
+                      f"frame size {frame_size} (order {lpc_order})", file=sys.stderr)
             file_data_blocks.append(data)
             file_sizes.append(len(data))
 
@@ -53,13 +58,14 @@ def pack_lpc_files(input_dir, output_prefix):
 
     # 5. Safety Check
     if len(full_package) > MAX_SIZE:
-        raise ValueError(f"ERROR: Padded size ({len(full_package)}) exceeds MAX_SIZE ({MAX_SIZE})")
+        raise ValueError(f"ERROR: size ({len(full_package)}) exceeds MAX_SIZE ({MAX_SIZE})")
 
     # 6. Diagnostic Table (Updated with Size and ROM)
-    print(f"\n{'Index':<7} | {'Offset':<10} | {'Size (B)':<10} | {'ROM(s)':<10} | {'Filename'}")
-    print("-" * 72)
+    print(f"\nLPC order: {lpc_order}  frame size: {frame_size} bytes")
+    print(f"\n{'Index':<7} | {'Offset':<10} | {'Size (B)':<10} | {'Frames':<8} | {'ROM(s)':<10} | {'Filename'}")
+    print("-" * 82)
     # Print the Null Index
-    print(f"[{0:02}]     | {hex(offsets[0]):<10} | {'-':<10} | {'-':<10} | Reserved/Null")
+    print(f"[{0:02}]     | {hex(offsets[0]):<10} | {'-':<10} | {'-':<8} | {'-':<10} | Reserved/Null")
     
     # Print the Files
     for i in range(1, len(offsets)):
@@ -67,17 +73,19 @@ def pack_lpc_files(input_dir, output_prefix):
         off = offsets[i]
         size = file_sizes[i-1]
         name = lpc_files[i-1]
+        frames = size // frame_size
         rom_start = off // CHUNK_SIZE + 1
         rom_end = (off + size - 1) // CHUNK_SIZE + 1
         if rom_start == rom_end:
             rom_str = str(rom_start)
         else:
             rom_str = f"{rom_start}-{rom_end}"
-        print(f"[{idx:02}]     | {hex(off):<10} | {size:<10} | {rom_str:<10} | {name}")
+        print(f"[{idx:02}]     | {hex(off):<10} | {size:<10} | {frames:<8} | {rom_str:<10} | {name}")
     
     print("-" * 72)
     print(f"Total Package: {len(full_package)} bytes ({len(full_package)//CHUNK_SIZE} ROMs)")
-    print(f"Free Space:    {MAX_SIZE - len(full_package)} bytes\n")
+    unpadded_size = len(header_binary) + len(combined_data)
+    print(f"Free Space:    {MAX_SIZE - unpadded_size} bytes\n")
 
     # 7. Split into 4KB Chunks
     for i in range(0, len(full_package), CHUNK_SIZE):
@@ -88,12 +96,19 @@ def pack_lpc_files(input_dir, output_prefix):
             f.write(chunk_data)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python3 pack_lpc.py <input_dir> <output_prefix>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Pack LPC files into 2732 ROMs with an index table header.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("input_dir", help="Directory containing .lpc files")
+    parser.add_argument("output_prefix", help="Output filename prefix for ROM chunks")
+    parser.add_argument('--lpc_order', type=int, default=10, choices=[8, 10, 12],
+                        help='LPC filter order for frame size validation (8, 10, or 12, default 10)')
+
+    args = parser.parse_args()
     
     try:
-        pack_lpc_files(sys.argv[1], sys.argv[2])
+        pack_lpc_files(args.input_dir, args.output_prefix, args.lpc_order)
     except Exception as e:
         print(e)
         sys.exit(1)
