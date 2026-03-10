@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="184px" height="260px" viewBox="0 0 184 260" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
+    <title>ear2</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="ferengi" transform="translate(-126.000000, -228.000000)" fill-rule="nonzero" stroke="#F5A623" stroke-width="2">
+            <g id="ear2" transform="translate(127.000000, 230.000000)">
+                <polyline id="Path-4" points="65 257 30.5 221.5 9 179 0 124 18.5 70 44 29 77 5.5 99 0 119 9.5 144 35.5"></polyline>
+                <path d="M93.7037037,248 L64.1043771,219 L40.5252525,182.5 L33,135 C34.1596897,124.675598 35.1630567,117.008931 36.010101,112 C36.8571453,106.991069 38.3621959,99.824402 40.5252525,90.5 L64.1043771,57.5 L84.6734007,39 L107.5,35 L129.824916,49 L142.367003,84 L159.925926,107.5 L182,126" id="Path-6"></path>
+            </g>
+        </g>
+    </g>
+</svg>
