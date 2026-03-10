@@ -42,7 +42,9 @@
 ;
 ;   15 bytes written sequentially from FRAME_BUF, descending from 0x2b.
 ;   byte[0] → 0x2b, byte[1] → 0x2a, ... byte[14] → 0x1d.
-;   All with P2=0x80.
+;   All with P2=0x80.  Always 15 bytes to SP0250 regardless of LPC_ORDER.
+;   When LPC_ORDER<12, ROM frames are shorter; trailing buffer slots are
+;   zero-padded by LOAD_FRAME so the SP0250 sees zeros for unused sections.
 ;
 ;------------------------------------------------------------------------------
 ; SILENCE FRAME VALUES  (from speech_01_lpc.txt silence frames)
@@ -52,6 +54,18 @@
 ;     byte[8] = 0x41   REPEAT|VOICED  (PITCH=0x40 → (0x40 & 0x7F)+1 = 0x41)
 ;
 ;==============================================================================
+
+;---------- BUILD FLAG: LPC ORDER ---------------------------------------------
+; Set LPC_ORDER to 8, 10, or 12.  Change all three values together:
+;
+;   Order 12 (default):  ROM_FRAME_SZ=15, PAD_BYTES=0
+;   Order 10:            ROM_FRAME_SZ=13, PAD_BYTES=2
+;   Order  8:            ROM_FRAME_SZ=11, PAD_BYTES=4
+;
+.equ LPC_ORDER,       10       ; LPC filter order: 8, 10, or 12
+.equ ROM_FRAME_SZ,    13       ; 3 + LPC_ORDER: bytes read from ROM per frame
+.equ PAD_BYTES,        2       ; 15 - ROM_FRAME_SZ: zero-fill count
+;-------------------------------------------------------------------------------
 
 .equ P2_SPEECH,  0x80   ; P2 for speech ROM reads and SP0250 register writes.
 .equ P2_Z80,     0x00   ; P2 for Z80 bus.
@@ -154,9 +168,10 @@ END_OF_DATA:
 
 ;==============================================================================
 ; LOAD_FRAME
-;   Read 15 bytes from external ROM into FRAME_BUF.
+;   Read ROM_FRAME_SZ bytes from external ROM into FRAME_BUF, then zero-pad
+;   any remaining bytes so SP0250 always sees a full 15-byte frame.
 ;   P2 = P2_SPEECH | R5,  address low = R4.
-;   R4/R5 advanced by 15 on return.
+;   R4/R5 advanced by ROM_FRAME_SZ on return.
 ;   Trashes: A, R0, R1, R2
 ;==============================================================================
 LOAD_FRAME:
@@ -168,7 +183,7 @@ LOAD_FRAME:
         MOV  R0, A
 
         MOV  R1, #FRAME_BUF
-        MOV  R2, #15
+        MOV  R2, #ROM_FRAME_SZ
 
 LF_LOOP:
         MOVX A, @R0
@@ -184,6 +199,18 @@ LF_LOOP:
 LF_NEXT:
         DJNZ R2, LF_LOOP
 
+        ; Zero-pad remaining bytes (PAD_BYTES) for SP0250.
+        ; When LPC_ORDER=12, PAD_BYTES=0 and the pad loop is skipped.
+        MOV  R2, #PAD_BYTES
+        MOV  A, R2
+        JZ   LF_DONE
+        CLR  A
+LF_PAD:
+        MOV  @R1, A
+        INC  R1
+        DJNZ R2, LF_PAD
+
+LF_DONE:
         MOV  A, R0
         MOV  R4, A
         RET
@@ -192,6 +219,7 @@ LF_NEXT:
 ; WRITE_FRAME
 ;   Write all 15 bytes from FRAME_BUF to SP0250 registers, descending
 ;   from SP0250_TOP (0x2b) to 0x1d.  byte[0] → 0x2b, byte[14] → 0x1d.
+;   Always writes 15 bytes regardless of LPC_ORDER.
 ;   Trashes: A, R0, R1, R2
 ;==============================================================================
 WRITE_FRAME:
@@ -214,7 +242,7 @@ WF_LOOP:
 
 ;==============================================================================
 ; SILENCE_FRAME
-;   Fill FRAME_BUF with a valid silent LPC frame.
+;   Fill FRAME_BUF with a valid silent LPC frame (always 15 bytes for SP0250).
 ;   Values from speech_01_lpc.txt silence frames:
 ;     byte[5] = 0xFF  (PITCH_ init to 0xFF in every Ghidra reset path)
 ;     byte[8] = 0x41  (PITCH=0x40 → (0x40 & 0x7F)+1 = 0x41)
