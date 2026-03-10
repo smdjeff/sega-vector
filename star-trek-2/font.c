@@ -4,271 +4,286 @@
 
 
 const uint8_t font_data_0[] = {
-     #include "art/font/0.h"
+     #include "art/0.h"
 };
 const uint8_t font_data_1[] = {
-     #include "art/font/1.h"
+     #include "art/1.h"
 };
 const uint8_t font_data_2[] = {
-     #include "art/font/2.h"
+     #include "art/2.h"
 };
 const uint8_t font_data_3[] = {
-     #include "art/font/3.h"
+     #include "art/3.h"
 };
 const uint8_t font_data_4[] = {
-     #include "art/font/4.h"
+     #include "art/4.h"
 };
 const uint8_t font_data_5[] = {
-     #include "art/font/5.h"
+     #include "art/5.h"
 };
 const uint8_t font_data_6[] = {
-     #include "art/font/6.h"
+     #include "art/6.h"
 };
 const uint8_t font_data_7[] = {
-     #include "art/font/7.h"
+     #include "art/7.h"
 };
 const uint8_t font_data_8[] = {
-     #include "art/font/8.h"
+     #include "art/8.h"
 };
 const uint8_t font_data_9[] = {
-     #include "art/font/9.h"
+     #include "art/9.h"
 };
 
 const uint8_t font_data_a[] = {
-     #include "art/font/a.h"
+     #include "art/a.h"
 };
 const uint8_t font_data_b[] = {
-     #include "art/font/b.h"
+     #include "art/b.h"
 };
 const uint8_t font_data_c[] = {
-     #include "art/font/c.h"
+     #include "art/c.h"
 };
 const uint8_t font_data_d[] = {
-     #include "art/font/d.h"
+     #include "art/d.h"
 };
 const uint8_t font_data_e[] = {
-     #include "art/font/e.h"
+     #include "art/e.h"
 };
 const uint8_t font_data_f[] = {
-     #include "art/font/f.h"
+     #include "art/f.h"
 };
 const uint8_t font_data_g[] = {
-     #include "art/font/g.h"
+     #include "art/g.h"
 };
 const uint8_t font_data_h[] = {
-     #include "art/font/h.h"
+     #include "art/h.h"
 };
 const uint8_t font_data_i[] = {
-     #include "art/font/i.h"
+     #include "art/i.h"
 };
 const uint8_t font_data_j[] = {
-     #include "art/font/j.h"
+     #include "art/j.h"
 };
 const uint8_t font_data_k[] = {
-     #include "art/font/k.h"
+     #include "art/k.h"
 };
 const uint8_t font_data_l[] = {
-     #include "art/font/l.h"
+     #include "art/l.h"
 };
 const uint8_t font_data_m[] = {
-     #include "art/font/m.h"
+     #include "art/m.h"
 };
 const uint8_t font_data_n[] = {
-     #include "art/font/n.h"
+     #include "art/n.h"
 };
 const uint8_t font_data_o[] = {
-     #include "art/font/o.h"
+     #include "art/o.h"
 };
 const uint8_t font_data_p[] = {
-     #include "art/font/p.h"
+     #include "art/p.h"
 };
 const uint8_t font_data_q[] = {
-     #include "art/font/q.h"
+     #include "art/q.h"
 };
 const uint8_t font_data_r[] = {
-     #include "art/font/r.h"
+     #include "art/r.h"
 };
 const uint8_t font_data_s[] = {
-     #include "art/font/s.h"
+     #include "art/s.h"
 };
 const uint8_t font_data_t[] = {
-     #include "art/font/t.h"
+     #include "art/t.h"
 };
 const uint8_t font_data_u[] = {
-     #include "art/font/u.h"
+     #include "art/u.h"
 };
 const uint8_t font_data_v[] = {
-     #include "art/font/v.h"
+     #include "art/v.h"
 };
 const uint8_t font_data_w[] = {
-     #include "art/font/w.h"
+     #include "art/w.h"
 };
 const uint8_t font_data_x[] = {
-     #include "art/font/x.h"
+     #include "art/x.h"
 };
 const uint8_t font_data_y[] = {
-     #include "art/font/y.h"
+     #include "art/y.h"
 };
 const uint8_t font_data_z[] = {
-     #include "art/font/z.h"
+     #include "art/z.h"
 };
 
-uint16_t fontAddress( char c ) {
-   switch ( c ) {
-        case '0': return (uint16_t)font_data_0;
-        case '1': return (uint16_t)font_data_1;
-        case '2': return (uint16_t)font_data_2;
-        case '3': return (uint16_t)font_data_3;
-        case '4': return (uint16_t)font_data_4;
-        case '5': return (uint16_t)font_data_5;
-        case '6': return (uint16_t)font_data_6;
-        case '7': return (uint16_t)font_data_7;
-        case '8': return (uint16_t)font_data_8;
-        case '9': return (uint16_t)font_data_9;
-        case 'a': return (uint16_t)font_data_a;
-        case 'b': return (uint16_t)font_data_b;
-        case 'c': return (uint16_t)font_data_c;
-        case 'd': return (uint16_t)font_data_d;
-        case 'e': return (uint16_t)font_data_e;
-        case 'f': return (uint16_t)font_data_f;
-        case 'g': return (uint16_t)font_data_g;
-        case 'h': return (uint16_t)font_data_h;
-        case 'i': return (uint16_t)font_data_i;
-        case 'j': return (uint16_t)font_data_j;
-        case 'k': return (uint16_t)font_data_k;
-        case 'l': return (uint16_t)font_data_l;
-        case 'm': return (uint16_t)font_data_m;
-        case 'n': return (uint16_t)font_data_n;
-        case 'o': return (uint16_t)font_data_o;
-        case 'p': return (uint16_t)font_data_p;
-        case 'q': return (uint16_t)font_data_q;
-        case 'r': return (uint16_t)font_data_r;
-        case 's': return (uint16_t)font_data_s;
-        case 't': return (uint16_t)font_data_t;
-        case 'u': return (uint16_t)font_data_u;
-        case 'v': return (uint16_t)font_data_v;
-        case 'w': return (uint16_t)font_data_w;
-        case 'x': return (uint16_t)font_data_x;
-        case 'y': return (uint16_t)font_data_y;
-        case 'z': return (uint16_t)font_data_z;
-   }
-   return 0;
-}
+typedef struct {
+    const vector_t *data;
+    uint8_t count;
+    uint8_t ox;
+    uint8_t oy;
+} font_entry_t;
 
-static uint16_t fontSize( char c ) {
-   switch ( c ) {
-        case '0': return sizeof(font_data_0);
-        case '1': return sizeof(font_data_1);
-        case '2': return sizeof(font_data_2);
-        case '3': return sizeof(font_data_3);
-        case '4': return sizeof(font_data_4);
-        case '5': return sizeof(font_data_5);
-        case '6': return sizeof(font_data_6);
-        case '7': return sizeof(font_data_7);
-        case '8': return sizeof(font_data_8);
-        case '9': return sizeof(font_data_9);
-        case 'a': return sizeof(font_data_a);
-        case 'b': return sizeof(font_data_b);
-        case 'c': return sizeof(font_data_c);
-        case 'd': return sizeof(font_data_d);
-        case 'e': return sizeof(font_data_e);
-        case 'f': return sizeof(font_data_f);
-        case 'g': return sizeof(font_data_g);
-        case 'h': return sizeof(font_data_h);
-        case 'i': return sizeof(font_data_i);
-        case 'j': return sizeof(font_data_j);
-        case 'k': return sizeof(font_data_k);
-        case 'l': return sizeof(font_data_l);
-        case 'm': return sizeof(font_data_m);
-        case 'n': return sizeof(font_data_n);
-        case 'o': return sizeof(font_data_o);
-        case 'p': return sizeof(font_data_p);
-        case 'q': return sizeof(font_data_q);
-        case 'r': return sizeof(font_data_r);
-        case 's': return sizeof(font_data_s);
-        case 't': return sizeof(font_data_t);
-        case 'u': return sizeof(font_data_u);
-        case 'v': return sizeof(font_data_v);
-        case 'w': return sizeof(font_data_w);
-        case 'x': return sizeof(font_data_x);
-        case 'y': return sizeof(font_data_y);
-        case 'z': return sizeof(font_data_z);
-   }
-   return 0;
-}
+const font_entry_t font_lookup[] = {
+    { (vector_t*)font_data_0, sizeof(font_data_0)/4, 35, 0 },
+    { (vector_t*)font_data_1, sizeof(font_data_1)/4, 35, 0 },
+    { (vector_t*)font_data_2, sizeof(font_data_2)/4, 35, 0 },
+    { (vector_t*)font_data_3, sizeof(font_data_3)/4, 35, 0 },
+    { (vector_t*)font_data_4, sizeof(font_data_4)/4, 35, 0 },
+    { (vector_t*)font_data_5, sizeof(font_data_5)/4, 35, 0 },
+    { (vector_t*)font_data_6, sizeof(font_data_6)/4, 35, 0 },
+    { (vector_t*)font_data_7, sizeof(font_data_7)/4, 35, 0 },
+    { (vector_t*)font_data_8, sizeof(font_data_8)/4, 35, 0 },
+    { (vector_t*)font_data_9, sizeof(font_data_9)/4, 35, 0 },
 
-static uint8_t offset_x( char ch ) {
-     return 35;
-}
+    { (vector_t*)font_data_a, sizeof(font_data_a)/4, 35, 0 },
+    { (vector_t*)font_data_b, sizeof(font_data_b)/4, 35, 0 },
+    { (vector_t*)font_data_c, sizeof(font_data_c)/4, 35, 0 },
+    { (vector_t*)font_data_d, sizeof(font_data_d)/4, 35, 0 },
+    { (vector_t*)font_data_e, sizeof(font_data_e)/4, 35, 0 },
+    { (vector_t*)font_data_f, sizeof(font_data_f)/4, 35, 0 },
+    { (vector_t*)font_data_g, sizeof(font_data_g)/4, 35, 0 },
+    { (vector_t*)font_data_h, sizeof(font_data_h)/4, 35, 0 },
+    { (vector_t*)font_data_i, sizeof(font_data_i)/4, 35, 0 },
+    { (vector_t*)font_data_j, sizeof(font_data_j)/4, 35, 0 },
+    { (vector_t*)font_data_k, sizeof(font_data_k)/4, 35, 0 },
+    { (vector_t*)font_data_l, sizeof(font_data_l)/4, 35, 0 },
+    { (vector_t*)font_data_m, sizeof(font_data_m)/4, 35, 0 },
+    { (vector_t*)font_data_n, sizeof(font_data_n)/4, 35, 0 },
+    { (vector_t*)font_data_o, sizeof(font_data_o)/4, 35, 0 },
+    { (vector_t*)font_data_p, sizeof(font_data_p)/4, 35, 0 },
+    { (vector_t*)font_data_q, sizeof(font_data_q)/4, 35, 0 },
+    { (vector_t*)font_data_r, sizeof(font_data_r)/4, 35, 0 },
+    { (vector_t*)font_data_s, sizeof(font_data_s)/4, 35, 0 },
+    { (vector_t*)font_data_t, sizeof(font_data_t)/4, 35, 0 },
+    { (vector_t*)font_data_u, sizeof(font_data_u)/4, 35, 0 },
+    { (vector_t*)font_data_v, sizeof(font_data_v)/4, 35, 0 },
+    { (vector_t*)font_data_w, sizeof(font_data_w)/4, 35, 0 },
+    { (vector_t*)font_data_x, sizeof(font_data_x)/4, 35, 0 },
+    { (vector_t*)font_data_y, sizeof(font_data_y)/4, 35, 0 },
+    { (vector_t*)font_data_z, sizeof(font_data_z)/4, 35, 0 },
+    { NULL,                   0,                     35, 0 } // space
+};
 
-static uint8_t offset_y( char ch ) {
-     return 0;
-}
-
-static uint16_t font_addr_string = 0;
-uint16_t installFonts( uint16_t addr ) {
-     font_addr_string = addr;
-     return addr;
-}
-
-static void colorize( uint8_t *const vec, uint16_t len, uint8_t color ) {
-   for (uint16_t i=0; i<len; i+=sizeof(vector_t)) {
-      if ( (uint16_t)&vec[i] < VECTOR_RAM + SYMBOLS_SZ  ) kill(0xE3);
-      if ( (uint16_t)&vec[i] + len >= VECTOR_RAM_END ) kill(0xE4);
-      vec[i] &= ~0x7E;
-      vec[i] |= (color & 0x7E);
+void colorize(vector_t *vec, uint16_t len, uint8_t color) {
+   if (len == 0) return;
+   uint8_t const masked_color = color & 0x7E;
+   while (len--) { // fast z80 flag checking after decrement
+      vec->color = (vec->color & ~0x7E) | masked_color;
+      vec++; 
    }
 }
 
-void drawString( symbol_t *const sym, uint16_t x, uint16_t y, uint8_t scale, uint8_t color, const char *const str, uint8_t len ) {
-   uint8_t *vec = (uint8_t*)font_addr_string;
-   uint16_t v_sz = 0;
-   
-   sym->vector_addr = V_ADDR(0); // blank
-
-  for (uint8_t i=0; i<len; i++) {
-      if ( (uint16_t)&vec[v_sz] + len + (sizeof(vector_t)*2) >= VECTOR_RAM_END ) kill(0xE1);
-
-      char ch = str[ i ];
-      uint8_t *in = (uint8_t*)fontAddress( ch );
-      if ( in ) {
-           uint16_t sz = fontSize( ch );
-           memcpy( &vec[v_sz], in, sz );
-           v_sz += sz;
-           vec[v_sz - 4] &= ~ SEGA_LAST;
-      }
-
-     uint8_t oy = offset_y( ch );
-     if ( oy ) {
-          vec[v_sz++] = 0x00;
-          vec[v_sz++] = oy;
-          vec[v_sz++] = LSB(SEGA_ANGLE(0));
-          vec[v_sz++] = MSB(SEGA_ANGLE(0));
-     }
-
-     uint8_t ox = offset_x( ch );
-     if ( ox ) {
-          vec[v_sz++] = 0x00;
-          vec[v_sz++] = ox;
-          vec[v_sz++] = LSB(SEGA_ANGLE(90));
-          vec[v_sz++] = MSB(SEGA_ANGLE(90));
-     }
-   }
-
-   if ( (uint16_t)&vec[v_sz-sizeof(vector_t)] < VECTOR_RAM + SYMBOLS_SZ ) kill(0xE2);
-
-   vec[v_sz - sizeof(vector_t)] |= SEGA_LAST;
-
-   if ( color ) {
-        colorize( vec, v_sz, color );
-   }
-
-   sym->x = x;
-   sym->y = y;
-   sym->vector_addr = (uint16_t)vec;
-   sym->scale = scale;
-   sym->visible = 1;
+void hex16( char *s, uint16_t value) {
+   const char *hex = "0123456789abcdef";
+   s[0] = hex[ (value >> 12) & 0x0F ];
+   s[1] = hex[ (value >> 8)  & 0x0F ];
+   s[2] = hex[ (value >> 4)  & 0x0F ];
+   s[3] = hex[ (value >> 0)  & 0x0F ];
 }
+
+void dec2(char *s, uint8_t value) {
+   uint8_t tens = 0;
+   while (value >= 10) {
+      value -= 10;
+      tens++;
+   }
+   s[0] = '0' + tens;
+   s[1] = '0' + value;
+}
+
+void dec4(char *s, uint16_t value) {
+   uint8_t thousands = 0;
+   uint8_t hundreds = 0;
+   while (value >= 1000) {
+      value -= 1000;
+      thousands++;
+   }
+   s[0] = '0' + thousands;
+   while (value >= 100) {
+      value -= 100;
+      hundreds++;
+   }
+   s[1] = '0' + hundreds;
+   uint8_t rem = (uint8_t)value;
+   uint8_t tens = 0;
+   while (rem >= 10) {
+      rem -= 10;
+      tens++;
+   }
+   s[2] = '0' + tens;
+   s[3] = '0' + rem;
+   for (uint8_t i=0;i<3;i++) {
+     if ( s[i] == '0' ) s[i] = ' '; else break;
+   }
+}
+
+#define VEC_OFF_Y(oy) ((uint32_t)(oy) << 8 | (uint32_t)SEGA_ANGLE(0)  << 16)
+#define VEC_OFF_X(ox) ((uint32_t)(ox) << 8 | (uint32_t)SEGA_ANGLE(90) << 16)
+
+void drawString(symbol_t *sym, vector_t *vec, uint16_t x, uint16_t y, uint8_t scale, uint8_t color, const char *str) {
+    register vector_t *v_ptr = vec;
+
+    while (*str) {
+        uint8_t c = *str++;
+        uint8_t idx;
+
+        if (c >= 'a' && c <= 'z')      idx = c - 'a' + 10;
+        else if (c >= '0' && c <= '9') idx = c - '0';
+        else if (c == ' ')             idx = 36;
+        else continue;
+
+        const font_entry_t *e = &font_lookup[idx];
+
+        if (e->data) {
+            memcpy(v_ptr, e->data, e->count * sizeof(vector_t));
+            v_ptr += e->count;
+            (v_ptr - 1)->last = 0;
+        }
+
+        if (e->oy) {
+            *(uint32_t*)v_ptr = VEC_OFF_Y(e->oy);
+            v_ptr++;
+        }
+
+        if (e->ox) {
+            *(uint32_t*)v_ptr = VEC_OFF_X(e->ox);
+            v_ptr++;
+        }
+    }
+
+    if (v_ptr > vec) (v_ptr - 1)->last = 1;
+
+    if (color) {
+        colorize(vec, (uint16_t)(v_ptr - vec), color);
+    }
+
+    sym->x = x;
+    sym->y = y;
+    sym->vector_addr = (uint16_t)vec;
+    sym->scale = scale;
+    sym->visible = 1;
+}
+
+
+uint16_t measureString(const char *str) __z88dk_fastcall {
+    register uint16_t total = 0;
+    
+    while (*str) {
+        uint8_t c = *str++;
+        uint8_t idx;
+        
+        if (c >= 'a')      idx = c - 'a' + 10;
+        else if (c >= '0') idx = c - '0';
+        else if (c == ' ') idx = 36;
+        else continue;
+
+        const font_entry_t *e = &font_lookup[idx];
+        
+        total += e->count;
+        if (e->oy) total++;
+        if (e->ox) total++;
+    }
+    return total;
+}
+
+
 
 
 

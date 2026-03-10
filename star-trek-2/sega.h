@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-
+#include <malloc.h>
 
 
 #define BIT(n)             (1<<(n))
@@ -14,7 +14,10 @@
 #define MSB(x)             (uint8_t)(((uint16_t)(x) >> 8) & 0xFF)
 #define LE(x)              LSB(x), MSB(x)
 #define SECONDS(s)         ((s)*1000/25)
-
+#define ALLOC(sz)          heap_alloc( heap, sz )
+#define FREE(p)            if (p) { heap_free( heap, p ); p=NULL; }
+#define SID(s)             ((s)-symbols)
+#define ABS(x)             ((x)<0?-(x):(x))
 
 
 ////////////////////////////////////
@@ -33,10 +36,7 @@
 // 0xE000   -------------------
 //          XY RAM (4k)
 //             symbols
-// 0xE160      vectors
-// 0xE5FC         font_addr_alpha
-// 0xE814         font_addr_numeric
-// 0xE8DC         font_addr_string
+//             vectors
 // 0xF000   -------------------
 //          NA (4k)
 // 0xFFFF
@@ -56,7 +56,6 @@
 #define VECTOR_RAM      (0xE000) // 4k ram (xy board)
 #define VECTOR_RAM_SZ   (4*1024)
 #define VECTOR_RAM_END  (VECTOR_RAM+VECTOR_RAM_SZ)
-#define SYMBOLS_SZ      (0x180)
 ////////////////////////////////////
 
 // Test button on CPU board asserts NMI
@@ -155,6 +154,7 @@ __sfr __at 0x3f SOUND_COMMAND;
 
 // 0 = 0 deg, 2^10 (1024) = 360 deg
 #define SEGA_ANGLE(deg)    ((int16_t)(((float)(deg))*2.845))
+#define SEGA_DEGREES(a)    ((uint16_t)divide2_9(a))
 
 #define V_ADDR(x) (VECTOR_RAM+SYMBOLS_SZ+((x)*4))
 #define S_ADDR(x) (VECTOR_RAM + ((x)*10))
@@ -189,11 +189,11 @@ typedef struct {
 typedef struct {
    union {
       struct {
-         uint8_t visible : 1;
+         uint8_t visible : 1; // lsb
          uint8_t blue    : 2;
          uint8_t green   : 2;
          uint8_t red     : 2;
-         uint8_t last    : 1;
+         uint8_t last    : 1; // msb
       };
       uint8_t color;
    };
@@ -238,13 +238,6 @@ typedef struct {
 #define MAX_Y (1024+400) // 1424
 
 // sounds
-#define BASE_DRUM    0x2E
-#define SNARE_DRUM   0x1E
-#define HAT_DRUM     0x0E
-#define CHOPPER_EXPLODE 0x1C
-#define TANK_MOVE    0x00
-#define TANK_FIRE    0x1A
-#define TANK_EXPLODE 0x16
 #define COIN_DROP    0x24
 #define BONUS_START  0x25
 #define BONUS_EXPIRE 0x10
@@ -304,58 +297,75 @@ typedef enum {
 
 typedef enum {
    NO_PHRASE = 0x00,                // no phrase
-   COMMAND_THE_ENTERPRISE = 0x01,   // "COMMAND THE ENTERPRISE"
-   PLAY_STAR_TREK = 0x02,           // "PLAY STAR TREK"
-   WELCOME_ABOARD_CAPTAIN = 0x03,   // "WELCOME ABOARD, CAPTAIN" (SPOCK)
-   CONGRATULATIONS = 0x04,          // "CONGRATULATIONS"
-   HIGH_SCORE = 0x05,               // "HIGH SCORE"
-   PRESS_PLAYER_ONE = 0x06,         // "PRESS PLAYER ONE"
-   OR_PLAYER_TWO = 0x07,            // "OR PLAYER TWO"
-   START = 0x08,                    // "START"
-   BE_THE_CAPTAIN = 0x09,           // "BE THE CAPTAIN OF THE STARSHIP ENTERPRISE" (SCOTTY)
-   DAMAGE_REPAIRED_SIR = 0x0A,      // "DAMAGE REPAIRED, SIR" (SCOTTY)
-   SECTOR_SECURED = 0x0B,           // "SECTOR SECURED" (CHEKOV)
-   ENTERING_SECTOR = 0x0C,          // "ENTERING SECTOR" (SPOCK)
-   ZERO = 0x0D,                     // "ZERO"
-   ONE = 0x0E,                      // "ONE"
-   TWO = 0x0F,                      // "TWO"
-   THREE = 0x10,                    // "THREE"
-   FOUR = 0x11,                     // "FOUR"
-   FIVE = 0x12,                     // "FIVE"
-   SIX = 0x13,                      // "SIX"
-   SEVEN = 0x14,                    // "SEVEN"
-   EIGHT = 0x15,                    // "EIGHT"
-   NINE = 0x16,                     // "NINE"
-   POINT = 0x17,                    // "POINT"
-   POINT_HIGHER_PITCH = 0x18,       // "POINT" (HIGHER PITCH)
-   RED_ALERT_PHRASE = 0x19,         // "RED ALERT"
-   LAST_PHRASE = 0x1A
+   FERENGI_AH = 1,
+   FERENGI_YES = 2,
+   FERENGI_OOMOX = 3,
+   POWER_FAILED = 4,
+   POWER_RESTORED = 5,
+   COUNT_2 = 6,
+   COUNT_3 = 7,
+   COUNT_4 = 8,
+   COUNT_5 = 9,
 } phrase_t;
 
 
 ////////////////////////////////////
-// font.h
-#define FONT_STRING 0x01
-uint16_t installFonts( uint16_t addr );
-uint16_t fontAddress( char c );
-void drawString( symbol_t *const sym, uint16_t x, uint16_t y, uint8_t scale, uint8_t color, const char *const str, uint8_t len );
-void drawScore( uint8_t score, bool reset );
-
-
-////////////////////////////////////
 // math.h
-uint8_t rand(void);
+uint8_t rand8(void);
+uint16_t rand16(void);
 inline uint16_t xy_multiply( uint8_t x, uint8_t y );
-uint16_t div_16(uint16_t u, uint16_t v);
+uint16_t div_16(uint16_t u, uint8_t v);
 uint8_t divideBy10(uint8_t *value);
 uint8_t divideBy100(uint8_t *value);
 void vectorToXY( uint16_t sega_angle, uint16_t length, int16_t *x, int16_t *y );
 uint16_t xyToVector(uint16_t x, uint16_t y);
 
-#define randSegaAngle()    (rand() << 2)
-#define divide3(x)         (((x)>>2)+((x)>>4))
-#define divide5(x)         (((x)>>3)+((x)>>4)+((x)>>6))
-#define divide40(x)        ((((x)*26214U)+(1U<<19))>>20)
+#define divide1_5(x) (uint16_t)(((x)>>1)+((x)>>3)+((x)>>5))
+// note: x < 8191
+#define divide2_9(x) (uint16_t)(((uint16_t)(x)<<3)+((uint16_t)(x)<<1)+(x))>>5
+#define divide5(x)   (uint16_t)(((x)>>3)+((x)>>4)+((x)>>6))
+#define divide25(x)  (uint16_t)(((uint16_t)(x)<<3)+((uint16_t)(x)<<1))>>8
+
+////////////////////////////////////
+// font.h
+uint16_t installFonts( uint16_t addr );
+uint16_t fontAddress( char c );
+void drawString( symbol_t *const sym, vector_t *const vec, uint16_t x, uint16_t y, uint8_t scale, uint8_t color, const char *const str);
+uint16_t measureString(const char *str) __z88dk_fastcall;
+void drawScore( uint16_t score, bool reset );
+uint8_t drawCountdown( uint8_t initValue );
+void hex16( char *s, uint16_t value);
+void dec2(char *s, uint8_t value);
+void dec4(char *s, uint16_t value);
+void colorize(vector_t *vec, uint16_t len, uint8_t color);
+
+////////////////////////////////////
+// vector.h
+#define HITBOX_SZ 80
+#define MAX_SYMBOLS 32
+void animate(uint16_t system_tick, symbol_t* symbols, uint8_t symbol_count); 
+void resetAnimate(void);
+void setTrajectory( uint8_t sid, uint8_t velocity, uint16_t sega_angle );
+void setSpeeds( uint8_t sid, int8_t x_speed, int8_t y_speed );
+void setRotationSpeed( uint8_t sid, int8_t rotation_speed );
+void setResizeSpeed( uint8_t sid, int8_t resize_speed );
+void setStop( uint8_t sid );
+
+void resetSymbol( symbol_t *const sym, uint16_t x, uint16_t y, uint16_t sega_angle, uint8_t scale );
+void enableSymbol( symbol_t *const sym, uint16_t x, uint16_t y, uint16_t sega_angle, uint8_t scale );
+void drawSymbol( symbol_t *const sym, vector_t *const vec, uint16_t x, uint16_t y, uint16_t sega_angle, uint8_t scale );
+
+void initVector( vector_t *const vec, uint8_t size, uint16_t angle, uint8_t color );
+void initSymbol( symbol_t *const sym, vector_t *const vec );
+bool checkColission( symbol_t *const s0, symbol_t *const s1 );
+
+
+////////////////////////////////////
+// diagnostic.h
+void beginDiagnosticsIO( void );
+void drawDiagnosticsIO( void );
+void beginDiagnosticsGrid( void );
+
 
 
 #ifdef MAME_BUILD
