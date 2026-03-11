@@ -220,6 +220,8 @@ void dec4(char *s, uint16_t value) {
 void drawString(symbol_t *sym, vector_t *vec, uint16_t x, uint16_t y, uint8_t scale, uint8_t color, const char *str) {
     register vector_t *v_ptr = vec;
 
+    sym->visible = 0;
+
     while (*str) {
         uint8_t c = *str++;
         uint8_t idx;

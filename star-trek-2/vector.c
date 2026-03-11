@@ -23,7 +23,7 @@ void drawSymbol( symbol_t *const sym, vector_t *const vec, uint16_t x, uint16_t 
    sym->visible = true;
    sym->x = x;
    sym->y = y;
-   sym->vector_addr = vec;
+   sym->vector_addr = (uint16_t)vec;
    sym->rotation = sega_angle;
    sym->scale = scale;
 }

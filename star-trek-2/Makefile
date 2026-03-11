@@ -96,6 +96,7 @@ roms: prereq gamerom
 
 mame: roms
 	# effectively a patch over the existing to make mame happy
+	$(RM) -rf startrek
 	unzip startrek.zip -d startrek
 	# bring in changes
 	rsync -vt roms/* startrek 
@@ -107,7 +108,7 @@ mame: roms
 	# new 8035 speech mcu driver
 	cp ../speech/main.bin startrek/1670.speech-u7
 	zip roms.zip startrek/*
-	rm -r startrek
+	$(RM) -rf startrek
 	mv roms.zip build/startrek.zip
 	$(MAME) -rp ./build startrek
 

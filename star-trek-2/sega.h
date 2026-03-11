@@ -239,8 +239,6 @@ typedef struct {
 
 // sounds
 #define COIN_DROP    0x24
-#define BONUS_START  0x25
-#define BONUS_EXPIRE 0x10
 
 
 typedef enum {
@@ -365,7 +363,6 @@ bool checkColission( symbol_t *const s0, symbol_t *const s1 );
 void beginDiagnosticsIO( void );
 void drawDiagnosticsIO( void );
 void beginDiagnosticsGrid( void );
-
 
 
 #ifdef MAME_BUILD

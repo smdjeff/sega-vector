@@ -64,7 +64,7 @@ void z80_rst_38h (void) __critical __interrupt(0) {
          } else {
             game_state = game_state_diagnostics_grid_init;
          }
-        debounce = 20;
+         debounce = 20;
       }
    } else {
       debounce--;
@@ -930,92 +930,94 @@ static void ferengiGame( void ) {
    FREE( vec_hand2 );
 }
 
+
 static uint8_t high_index = 0;
+static uint8_t initials_ix = 0;
+static char initials_last_ch = 0;
+static char initials[4] = {0,};
+static uint16_t vec_length = 0;
+
+static inline void redrawString( void ) {
+   drawString( sym_string3, vec_string3, CENTER_X-70, CENTER_Y-220, 0xF0, SEGA_COLOR_WHITE, initials );
+}
 
 static void beginDrawInitials( void ) {
    // say( HIGH_SCORE );
-   // enableSymbol( S_NAME0, CENTER_X-70, CENTER_Y-220, SEGA_ANGLE(0), 0xA0 );
-   // enableSymbol( S_NAME1, CENTER_X-10, CENTER_Y-220, SEGA_ANGLE(0), 0xA0 );
-   // enableSymbol( S_NAME2, CENTER_X+50, CENTER_Y-220, SEGA_ANGLE(0), 0xA0 );
-   // spinner_vector_angle( true );
+   initials_ix = 0;
+   initials_last_ch = 0;
+   memcpy( initials, "   ", 3 );
+   const char s[] = "888";
+   vec_length = measureString(s) * sizeof(vector_t);
+   vec_string3 = ALLOC( vec_length );
+   redrawString();
+   spinner_vector_angle( true );
 
-   // if ( score >= high_score[0] ) {
-   //    high_index = 0;
-   //    high_score[ 2 ] = high_score[ 1 ];
-   //    high_score[ 1 ] = high_score[ 0 ];
-   //    high_score[ 0 ] = score;
-   //    memcpy( high_name[2], high_name[1], 3 );
-   //    memcpy( high_name[1], high_name[0], 3 );
-   //    memset( high_name[0], 0x00, 3 );
-   //    return;
-   // }
-   // if ( score >= high_score[1] ) {
-   //    high_index = 1;
-   //    high_score[ 2 ] = high_score[ 1 ];
-   //    high_score[ 1 ] = score;
-   //    memcpy( high_name[2], high_name[1], 3 );
-   //    memset( high_name[1], 0x00, 3 );
-   //    return;
-   // }
-   // if ( score >= high_score[2] ) {
-   //    high_index = 2;
-   //    high_score[ 2 ] = score;
-   //    memset( high_name[2], 0x00, 3 );
-   //    return;
-   // }
+   if ( score >= high_score[0] ) {
+      high_index = 0;
+      high_score[2] = high_score[1];
+      high_score[1] = high_score[0];
+      high_score[0] = score;
+      memcpy( high_name[2], high_name[1], 3 );
+      memcpy( high_name[1], high_name[0], 3 );
+      memset( high_name[0], 0x00, 3 );
+      return;
+   }
+   if ( score >= high_score[1] ) {
+      high_index = 1;
+      high_score[2] = high_score[1];
+      high_score[1] = score;
+      memcpy( high_name[2], high_name[1], 3 );
+      memset( high_name[1], 0x00, 3 );
+      return;
+   }
+   if ( score >= high_score[2] ) {
+      high_index = 2;
+      high_score[2] = score;
+      memset( high_name[2], 0x00, 3 );
+      return;
+   }
 }
 
 
 static bool drawInitials( void ) {
-   // static uint8_t ix = 0;
-   // static uint16_t *addr[] = {  &symbols[S_NAME0].vector_addr,
-   //                              &symbols[S_NAME1].vector_addr,
-   //                              &symbols[S_NAME2].vector_addr };
+   uint16_t vec_angle = spinner_vector_angle( false );
+   char ch = 'a' + div_16( vec_angle, 39 );
+   ch = MIN( MAX(ch, 'a'), 'z' );
 
-   // uint16_t vec_angle = spinner_vector_angle( false );
-   // char ch = 'a' + div_16( vec_angle, 39 ); // 2^10 / 26
-   // ch = MIN( MAX(ch, 'a'), 'z');
-   // static char last_ch = 0;
-   // if ( ch != last_ch ) {
-   //    last_ch = ch;
-   //    *addr[ix] = fontAddress( ch );
-   // } else {
-   //    // blink cursor
-   //    static uint16_t last_tick = 0;
-   //    if ( (system_tick - last_tick) > 10 ) {
-   //       last_tick = system_tick;
-   //       if ( *addr[ix] == V_ADDR(V_LINE) ) {
-   //          *addr[ix] = fontAddress( ch );
-   //       } else {
-   //          *addr[ix] = V_ADDR(V_LINE);
-   //       }
-   //    }
-   // }
+   if ( ch != initials_last_ch ) {
+      initials_last_ch = ch;
+      initials[initials_ix] = ch;
+      redrawString();
+   } else {
+      static uint16_t last_tick = 0;
+      if ( (system_tick - last_tick) > 6 ) {
+         last_tick = system_tick;
+         initials[initials_ix] = (initials[initials_ix] == ' ') ? ch : ' ';
+         redrawString();
+      }
+   }
 
-   // // debounce and advance next letter
-   // static uint16_t last_button_tick = 0; 
-   // uint8_t buttons = PORT_374;
-   // if ((buttons & BUTTON_FIRE) && ((system_tick - last_button_tick) > 50)) {
-   //    last_button_tick = system_tick;
-   //    high_name[  high_index ][ ix ] = ch;
-   //    *addr[ix] = fontAddress( ch );
-   //    ix++;
-   //    if (ix == 3) {
-   //       ix = 0;
-   //       say( CONGRATULATIONS );
-   //       uint16_t last_tick = system_tick;
-   //       // rainbow effect
-   //       for (uint8_t color=0; color<0x3F; color++) {
-   //          // synchronize color to the vector XY redraw
-   //          static uint16_t last_tick = 0;
-   //          while ( system_tick == last_tick ) {
-   //             __asm__( "nop" );
-   //          }
-   //          last_tick = system_tick;
-   //       }
-   //       return true;
-   //    }
-   // }
+   static uint16_t last_button_tick = 0;
+   uint8_t buttons = PORT_374;
+   if ((buttons & BUTTON_FIRE) && ((system_tick - last_button_tick) > 33)) {
+      last_button_tick = system_tick;
+      initials[initials_ix] = ch;
+      high_name[high_index][initials_ix] = ch;
+      initials_ix++;
+      redrawString();
+      if (initials_ix == 3) {
+//         say( CONGRATULATIONS );
+         for (uint8_t color = 0; color < 0x3F; color++) {
+            colorize( vec_string3, vec_length, color );
+            static uint16_t lt = 0;
+            while ( system_tick == lt ) { __asm__( "nop" ); }
+            lt = system_tick;
+         }
+         sym_string3->visible = false;
+         FREE( vec_string3 );
+         return true;
+      }
+   }
    return false;
 }
 
@@ -1075,45 +1077,40 @@ static bool drawPlay(void) {
 
    shirtGame();
 
-   crystalGame();
-
    ferengiGame();
 
+   crystalGame();
+
    return true;
-
-   // uint8_t buttons = PORT_374;
-
-   // static uint8_t ct=0;
-   // if ( ct == 0 ) {
-   //    if ( buttons & BUTTON_FIRE ) {
-   //       SOUND_COMMAND = TANK_FIRE;
-   //    }
-   // }
-
-   // return false;
 }
 
 static void beginGameOver(void) {
-   // if ( score <= high_score[2] ) {
-   //    const char s[] = "game over";
-   //    drawString( &symbols[S_STRING], CENTER_X-280, MIN_Y, 0xFE, SEGA_COLOR_RED, s, sizeof(s)-1 );
-   // }  else {
-   //    const char s[] = "high score";
-   //    drawString( &symbols[S_STRING], CENTER_X-280, MIN_Y, 0xFE, SEGA_COLOR_YELLOW, s, sizeof(s)-1 );
-   // }
+   if ( score <= high_score[2] ) {
+      const char s[] = "game over";
+      vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
+      drawString( sym_string1, vec_string1, CENTER_X-280, MIN_Y, 0xF0, SEGA_COLOR_RED, s );
+   }  else {
+      const char s[] = "high score";
+      vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
+      drawString( sym_string1, vec_string1, CENTER_X-280, MIN_Y, 0xF0, SEGA_COLOR_YELLOW, s );
+   }
 
-   // setTrajectory( S_STRING, 5, SEGA_ANGLE(0) );
+   setTrajectory( SID(sym_string1), 5, SEGA_ANGLE(0) );
 }
 
 static bool drawGameOver(void) {
-   // // wait for text to slide into place
-   // if ( symbols[S_STRING].y > MAX_Y - 120 ) {
-   //    setStop( S_STRING );
-   //    return true;
-   // }
+   // wait for text to slide into place
+   if ( sym_string1->y > MAX_Y - 200 ) {
+      setStop( SID(sym_string1) );
+      return true;
+   }
    return false;
 }
 
+static void endGameOver(void) {
+   sym_string1->visible = false;
+   FREE( vec_string1 );
+}
 
 static void super_loop(void) {
       static uint16_t last_tick = 0;
@@ -1143,35 +1140,37 @@ static void super_loop(void) {
             }
             break;
 
-         // case game_state_game_over:
-         //    if ( drawGameOver() ) {
-         //       if ( score < high_score[2] ) {
-         //          last_tick = system_tick;
-         //          game_state = game_state_game_over_pause;
-         //       } else {
-         //          game_state = game_state_highscore;
-         //          beginDrawInitials();
-         //       }
-         //    } else {
+         case game_state_game_over:
+            if ( drawGameOver() ) {
+               if ( score < high_score[2] ) {
+                  last_tick = system_tick;
+                  game_state = game_state_game_over_pause;
+                  endGameOver();
+               } else {
+                  game_state = game_state_highscore;
+                  beginDrawInitials();
+               }
+            } else {
                
-         //    }
-         //    break;
+            }
+            break;
 
-         // case game_state_game_over_pause:
-         //    if ( system_tick - last_tick > SECONDS(4) ) {
-         //       game_state = game_state_boot;
-         //    } else {
+         case game_state_game_over_pause:
+            if ( system_tick - last_tick > SECONDS(4) ) {
+               endGameOver();
+               game_state = game_state_boot;
+            } else {
                
-         //    }
-         //    break;
+            }
+            break;
 
-         // case game_state_highscore:
-         //    if ( drawInitials() ) {
-         //       game_state = game_state_boot;
-         //    } else {
+         case game_state_highscore:
+            if ( drawInitials() ) {
+               game_state = game_state_boot;
+            } else {
                
-         //    }
-         //    break;
+            }
+            break;
 
          // case game_state_diagnostics_io_init:
          //    beginDiagnosticsIO();
@@ -1190,7 +1189,6 @@ static void super_loop(void) {
          // case game_state_diagnostics_grid:
          //    drawDiagnosticsGrid();
          //    break;
-
 
       }
 }
