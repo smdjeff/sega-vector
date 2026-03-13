@@ -36,8 +36,8 @@ SPEECH_SOURCES := $(wildcard speech/*.wav)
 LPC_TARGETS    := $(patsubst speech/%.wav, $(SPEECH_BUILD_DIR)/%.lpc, $(SPEECH_SOURCES))
 
 # --- Compiler & Tool Definitions ---
-MAME   = /Users/jeff/Downloads/mame-master/mame
-SOURCE = main.c font.c math.c usb.c vector.c
+MAME   = ~/Downloads/mame-master/mame
+SOURCE = main.c font.c math.c usb.c vector.c game-crystal.c game-shirt.c game-ferengi.c
 
 CFLAGS = -DENABLE_BOOTROM
 CFLAGS += -DMAME_BUILD
@@ -62,8 +62,8 @@ clean:
 # --- Compilation Targets
 
 gamerom: prereq bootrom speech art
-	@echo "building 32k rom at 0x800 for use with sega-boot-rom in cpu rom socket"
-	zcc +z80 --list -m -vn -SO3 -compiler=sdcc -startup=1 $(SOURCE) -o $@ -create-app $(CFLAGS) -Cz"--rombase=0x0800 --romsize=30720"
+	@echo "building 48k rom 0x0800-0xBFFF, sega-boot-rom in cpu rom socket"
+	zcc +z80 --list -m -vn -SO3 -compiler=sdcc -startup=1 $(SOURCE) -o $@ -create-app $(CFLAGS) -Cz"--rombase=0x0800 --romsize=47104"
 	@mv $@* build/ 2>/dev/null || true
 	@mv *.lis build/ 2>/dev/null || true
 	@printf 'ROM usage: ' && stat -f '%z' build/$@_CODE.bin
@@ -72,7 +72,7 @@ gamerom: prereq bootrom speech art
 	@rm -f build/$@.bin
 	cat build/bootrom.bin >> build/$@.bin
 	cat build/$@.rom >> build/$@.bin
-	truncate -s 32K build/$@.bin
+	truncate -s 48K build/$@.bin
 
 bootrom: prereq
 	z80asm bootrom.asm -o build/$@.bin
