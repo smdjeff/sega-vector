@@ -1,4 +1,3 @@
-
 ////////////////////////////////////
 // dependencies:
 // https://github.com/z88dk/z88dk/releases
@@ -11,9 +10,9 @@
 
 
 static volatile uint8_t nmi_counter = 0;
-static volatile uint16_t system_tick = 0;
+volatile uint16_t system_tick = 0;
 static volatile uint8_t _coin_counter = 0;
-static uint16_t score = 0;
+uint16_t score = 0;
 static uint16_t high_score[3] = { 789, 456, 123 };
 static char high_name[3][4] = { "jef", "sno", "amy" };
 static game_state_t game_state = game_state_boot;
@@ -73,9 +72,7 @@ void z80_rst_38h (void) __critical __interrupt(0) {
 }
 
 
-
-
-static void delay(uint16_t ms) {
+void delay(uint16_t ms) {
    while ( ms-- ) {
       for (uint16_t i=0; i<27; i++) {   // 1ms at 3.86712 MHz (when XY board is clocking)
       //for (uint16_t i=0; i<28; i++) {   // 1ms at 4.0 MHz (when CPU board is self clocking)
@@ -95,7 +92,7 @@ static void sound_init(void) {
 }
 
 
-static void say(uint8_t i) {
+void say(uint8_t i) {
 
    // static uint16_t last_tick = 0;
    // // while ( system_tick - last_tick < 750/25 ) {
@@ -123,92 +120,6 @@ static void say(uint8_t i) {
 
 }
 
-
-/////// attract sequence
-
-const uint8_t vector_logo[] = {
-    #include "art/logo.h"
-};
-
-///////
-
-/////// game 1
-
-const uint8_t vector_latinum[] = {
-   #include "art/latinum.h"
-};
-
-const uint8_t vector_head[] = {
-    #include "art/head.h"
-};
-
-const uint8_t vector_ear1[] = {
-    #include "art/ear1.h"
-};
-
-const uint8_t vector_ear2[] = {
-    #include "art/ear2.h"
-};
-
-const uint8_t vector_shirt[] = {
-    #include "art/shirt.h"
-};
-
-const uint8_t vector_hand1[] = {
-    #include "art/hand1.h"
-};
-
-const uint8_t vector_hand2[] = {
-    #include "art/hand2.h"
-};
-
-const uint8_t vector_expression1[] = {
-    #include "art/expression1.h"
-};
-
-const uint8_t vector_expression2[] = {
-    #include "art/expression2.h"
-};
-
-const uint8_t vector_expression3[] = {
-    #include "art/expression3.h"
-};
-
-////////
-
-/////// game 2
-
-const uint8_t vector_shirt_yellow[] = {
-    #include "art/shirt-yellow.h"
-};
-
-const uint8_t vector_shirt_blue[] = {
-    #include "art/shirt-blue.h"
-};
-
-const uint8_t vector_shirt_red[] = {
-    #include "art/shirt-red.h"
-};
-
-//////// game 3
-
-const uint8_t vector_jar[] = {
-    #include "art/jar.h"
-};
-
-const uint8_t vector_crystal1[] = {
-    #include "art/crystal1.h"
-};
-
-const uint8_t vector_crystal2[] = {
-    #include "art/crystal2.h"
-};
-
-const uint8_t vector_crystal3[] = {
-    #include "art/crystal3.h"
-};
-
-////////
 
 // cliché-based mini-game ideas
 // funny and dub could be inspiring for middle finger to the Trek license
@@ -339,7 +250,7 @@ void initSymbols(void) {
 }
 
 
-static uint16_t spinner_vector_angle( bool reset ) {
+uint16_t spinner_vector_angle( bool reset ) {
    PORT_370 = SELECT_SPINNER;
    delay(1);
    uint8_t value = PORT_374;
@@ -394,6 +305,11 @@ static void timer_interrupt_4Hz(void) {
 
    }
 }
+
+
+const uint8_t vector_logo[] = {
+    #include "art/logo.h"
+};
 
 static void beginAttract( void ) {
    resetAnimate();
@@ -551,384 +467,13 @@ static bool drawAttract( void ) {
 }
 
 
-static void crystalGame( void ) {
-   vector_t* vec_jar = ALLOC( sizeof(vector_jar) );
-   memcpy( vec_jar, vector_jar, sizeof(vector_jar) );
-   vector_t* vec_crystal1 = ALLOC( sizeof(vector_crystal1) );
-   memcpy( vec_crystal1, vector_crystal1, sizeof(vector_crystal1) );
-   vector_t* vec_crystal2 = ALLOC( sizeof(vector_crystal2) );
-   memcpy( vec_crystal2, vector_crystal2, sizeof(vector_crystal2) );
-   vector_t* vec_crystal3 = ALLOC( sizeof(vector_crystal3) );
-   memcpy( vec_crystal3, vector_crystal3, sizeof(vector_crystal3) );
-
-   drawSymbol( sym_jar, vec_jar, CENTER_X, CENTER_Y, SEGA_ANGLE(0), 0xE0 );
-   drawSymbol( sym_crystal1, vec_crystal1, CENTER_X-120, CENTER_Y, SEGA_ANGLE(0), 0x60 );
-   drawSymbol( sym_crystal2, vec_crystal2, CENTER_X,     CENTER_Y, SEGA_ANGLE(0), 0x60 );
-   drawSymbol( sym_crystal3, vec_crystal3, CENTER_X+120, CENTER_Y, SEGA_ANGLE(0), 0x60 );
-
-   symbol_t* sym_list[] = { sym_crystal1, sym_crystal2, sym_crystal3 };
-
-   say( POWER_FAILED );
-   delay( 1000 );
-
-   SOUND_COMMAND = NOMAD_MOTION;
-
-   for (uint16_t i = 0; i < 500; i++) {
-      for (uint8_t ix = 0; ix < 3; ix++) {
-         symbol_t* sym = sym_list[ix];
-         uint8_t r = rand8();
-         if (r & 0x01) {
-            sym->rotation += SEGA_ANGLE(2);
-         } else {
-            sym->rotation -= SEGA_ANGLE(2);
-         }
-         if (r & 0x02) {
-            sym->x += 2;
-         } else {
-            sym->x -= 2;
-         }
-         if (r & 0x04) {
-            sym->y += 2;
-         } else {
-            sym->y -= 2;
-         }
-         if (r & 0x08) {
-            sym->scale += 2;
-         } else {
-            sym->scale -= 2;
-         }
-      }
-      delay(10);
-   }
-
-   SOUND_COMMAND = NOMAD_MOTION_END;
-
-   say( POWER_RESTORED );
-   delay(1000);
-
-   sym_jar->visible = false;
-   sym_crystal1->visible = false;
-   sym_crystal2->visible = false;
-   sym_crystal3->visible = false;
-   FREE( vec_jar );
-   FREE( vec_crystal1 );
-   FREE( vec_crystal2 );
-   FREE( vec_crystal3 );
-}
-
-static void waitAnimate( uint16_t ticks ) {
+void waitAnimate( uint16_t ticks ) {
    uint16_t last_tick = system_tick;
    do {
       animate( system_tick, symbols, symbols_count );
    } while ( system_tick - last_tick < ticks );
 }
 
-static const int16_t SHIRT_X[3] = { CENTER_X-300, CENTER_X, CENTER_X+300 };
-#define SHIRT_MOVE_TICKS  10
-#define ARC_SPEED         10
-
-static void shirtGame( void ) {
-   vector_t* vec_shirt_yellow = ALLOC( sizeof(vector_shirt_yellow) );
-   memcpy( vec_shirt_yellow, vector_shirt_yellow, sizeof(vector_shirt_yellow) );
-   vector_t* vec_shirt_blue = ALLOC( sizeof(vector_shirt_blue) );
-   memcpy( vec_shirt_blue, vector_shirt_blue, sizeof(vector_shirt_blue) );
-   vector_t* vec_shirt_red = ALLOC( sizeof(vector_shirt_red) );
-   memcpy( vec_shirt_red, vector_shirt_red, sizeof(vector_shirt_red) );
-
-
-   symbol_t* slots[3] = { sym_shirt1, sym_shirt2, sym_shirt3 };
-
-   drawCountdown( 20 );
-   while ( drawCountdown(0) ) {
-
-      sym_box->visible = false;
-
-      drawSymbol( sym_shirt1, vec_shirt_yellow, SHIRT_X[0], CENTER_Y, SEGA_ANGLE(0), 0x80 );
-      drawSymbol( sym_shirt2, vec_shirt_blue,   SHIRT_X[1], CENTER_Y, SEGA_ANGLE(0), 0x80 );
-      drawSymbol( sym_shirt3, vec_shirt_red,    SHIRT_X[2], CENTER_Y, SEGA_ANGLE(0), 0x80 );
-
-      for (uint8_t i=0; i<4; i++) {
-         int8_t arc[3];
-         int8_t vx_saved[3];
-
-         for (uint8_t j = 2; j > 0; j--) {
-            uint8_t r = rand8() % (j + 1);
-            symbol_t* temp = slots[j];
-            slots[j] = slots[r];
-            slots[r] = temp;
-         }
-
-         for (uint8_t s = 0; s < 3; s++) {
-            symbol_t* sym = slots[s];
-            int16_t dx  = SHIRT_X[s] - sym->x;
-            vx_saved[s] = dx / SHIRT_MOVE_TICKS;
-            arc[s]      = (dx > 0) ? -ARC_SPEED : (dx < 0) ? ARC_SPEED : 0;
-            setSpeeds( SID(sym), vx_saved[s], arc[s] );
-         }
-
-         SOUND_COMMAND = PHASER;
-         waitAnimate( SECONDS(0.125) );
-
-         for (uint8_t s = 0; s < 3; s++) {
-            setSpeeds( SID(slots[s]), vx_saved[s], -arc[s] );
-         }
-
-         waitAnimate( SECONDS(0.125) );
-
-         for (uint8_t s = 0; s < 3; s++) {
-            slots[s]->x = SHIRT_X[s];
-            slots[s]->y = CENTER_Y;
-            setStop( SID(slots[s]) );
-         }
-      }
-
-      symbol_t *sym_red_shirt = sym_shirt3;
-
-      do {
-         uint8_t buttons = PORT_374;
-         if (buttons & BUTTON_FIRE) {
-            if ( checkColission(sym_box, sym_shirt1) ) { setRotationSpeed( SID(sym_shirt1), 66); setResizeSpeed( SID(sym_shirt1), -15 ); }
-            else if ( checkColission(sym_box, sym_shirt2) ) { setRotationSpeed( SID(sym_shirt2), 66); setResizeSpeed( SID(sym_shirt2), -15 ); }
-            else if ( checkColission(sym_box, sym_shirt3) ) { setRotationSpeed( SID(sym_shirt3), 66); setResizeSpeed( SID(sym_shirt3), -15 ); }
-            if ( checkColission(sym_box, sym_red_shirt) ) {
-               score++;
-               drawScore(score,false);
-               SOUND_COMMAND = STARBASE_RED;
-            } else {
-               SOUND_COMMAND = DOCK;
-            }
-            waitAnimate( SECONDS(0.75) );
-            setStop( SID(sym_shirt1) );
-            setStop( SID(sym_shirt2) );
-            setStop( SID(sym_shirt3) );
-            break;
-         }
-         uint16_t angle = spinner_vector_angle( false );
-         int16_t dx, dy;
-         vectorToXY(angle, 500, &dx, &dy);
-         drawSymbol( sym_box, vec_box, CENTER_X+dx, CENTER_Y, SEGA_ANGLE(0), 0xff );
-      } while ( drawCountdown(0) );
-
-      sym_box->visible = false;
-
-   }
-
-   sym_shirt1->visible = false;
-   sym_shirt2->visible = false;
-   sym_shirt3->visible = false;
-   FREE( vec_shirt_yellow );
-   FREE( vec_shirt_blue );
-   FREE( vec_shirt_red );
-}
-
-typedef enum {
-   HAPPY = 1, // sounds 1 ah, 3 yes
-   ANGRY = 2, // no sound
-   OHYES = 3  // sound 2 oomox
-} expression_t;
-
-void drawExpression(vector_t* vec, expression_t ix) {
-   static expression_t last_expression = 0;
-   if (ix != last_expression) {
-      switch (ix) {
-      case HAPPY:
-         if ( rand8() & 0x01 ) say(FERENGI_AH); else say(FERENGI_YES);
-         sym_expression->visible = false;
-         memcpy( vec, vector_expression1, sizeof(vector_expression1) );
-         sym_expression->visible = true; 
-         break;
-      case ANGRY:
-         sym_expression->visible = false;
-         memcpy( vec, vector_expression2, sizeof(vector_expression2) );
-         sym_expression->visible = true; 
-         break;
-      case OHYES:
-         sym_expression->visible = false;
-         memcpy( vec, vector_expression3, sizeof(vector_expression3) );
-         sym_expression->visible = true; 
-         break;
-      default: 
-         sym_expression->visible = false;
-         break;
-      }
-      last_expression = ix;
-   }
-}
-
-void drawSparkle(uint16_t x, uint16_t y, uint16_t angle) {
-   symbol_t* sym = 0;
-   if (!sym_latinum1->visible) sym=sym_latinum1;
-   else if (!sym_latinum2->visible) sym=sym_latinum2;
-   else if (!sym_latinum3->visible) sym=sym_latinum3;
-
-   if (sym) {
-      enableSymbol( sym, x, y, SEGA_ANGLE(0), 0x60 );
-      setTrajectory( SID(sym), 5, angle );
-      setResizeSpeed( SID(sym), -3 );
-      setRotationSpeed( SID(sym), 20 + (rand8() & 0x3F) );
-   }
-}
-
-void drawHand(uint16_t vec_angle, uint8_t tickle) {
-   int16_t dx, dy, finger_x;
-   vectorToXY(vec_angle, 240, &dx, &dy);
-
-   dy = divide1_5( dy );
-
-   sym_hand1->visible = (dx > 0);
-   sym_hand2->visible = (dx < 0);
-
-   sym_hand1->x = CENTER_X - 0 + dx;
-   sym_hand1->y = CENTER_Y + 50 - dy;
-   sym_hand2->x = CENTER_X + 0 + dx;
-   sym_hand2->y = CENTER_Y + 70 - dy;
-
-   sym_hand1->rotation = (SEGA_ANGLE(0) + (dy >> 0)) & 0x03FF;
-   sym_hand2->rotation = (SEGA_ANGLE(0) - (dy >> 0)) & 0x03FF;
-
-   if (dy < 0) {
-      finger_x = sym_hand2->rotation;
-   } else {
-      finger_x = -((0x3FF - sym_hand2->rotation) >> 2); 
-   }
-
-   if ( tickle == 1 ) {
-      // left ear
-      uint16_t x = (int16_t)sym_hand1->x - finger_x; 
-      uint16_t y = sym_hand1->y + 50;
-      drawSparkle( x, y, SEGA_ANGLE(225)+rand8());
-   }
-
-   if ( tickle == 2 ) {
-      // right ear
-      uint16_t x = (int16_t)sym_hand2->x + 10 + finger_x;
-      uint16_t y = sym_hand2->y + 50;
-      drawSparkle( x, y, SEGA_ANGLE(45)+rand8() );
-   }
-}
-
-static void ferengiGame( void ) {
-
-   vector_t* vec_latinum = ALLOC( sizeof(vector_latinum) );
-   memcpy( vec_latinum, vector_latinum, sizeof(vector_latinum) );
-   initSymbol( sym_latinum1, vec_latinum );
-   initSymbol( sym_latinum2, vec_latinum );
-   initSymbol( sym_latinum3, vec_latinum );
-
-   vector_t* vec_head = ALLOC( sizeof(vector_head) );
-   memcpy( vec_head, vector_head, sizeof(vector_head) );
-   drawSymbol( sym_head, vec_head, CENTER_X, CENTER_Y+100, SEGA_ANGLE(0), 0x80 );
-
-   vector_t* vec_ear1 = ALLOC( sizeof(vector_ear1) );
-   memcpy( vec_ear1, vector_ear1, sizeof(vector_ear1) );
-   drawSymbol( sym_ear1, vec_ear1, CENTER_X+188, CENTER_Y+78, SEGA_ANGLE(0), 0x80 );
-
-   vector_t* vec_ear2 = ALLOC( sizeof(vector_ear2) );
-   memcpy( vec_ear2, vector_ear2, sizeof(vector_ear2) );
-   drawSymbol( sym_ear2, vec_ear2, CENTER_X-174, CENTER_Y+111, SEGA_ANGLE(0), 0x80 );
-
-   vector_t* vec_shirt = ALLOC( sizeof(vector_shirt) );
-   memcpy( vec_shirt, vector_shirt, sizeof(vector_shirt) );
-   drawSymbol( sym_shirt, vec_shirt, CENTER_X+10, CENTER_Y-160, SEGA_ANGLE(0), 0x80 );
-
-   vector_t* vec_expression = ALLOC( MAX(MAX(sizeof(vector_expression1),sizeof(vector_expression2)),sizeof(vector_expression3)) );
-   memcpy( vec_expression, vector_expression2, sizeof(vector_expression2) );
-   drawSymbol( sym_expression, vec_expression, CENTER_X+20, CENTER_Y+70, SEGA_ANGLE(0), 0x80 );
-
-   vector_t* vec_hand1 = ALLOC( sizeof(vector_hand1) );
-   memcpy( vec_hand1, vector_hand1, sizeof(vector_hand1) );
-   initSymbol( sym_hand1, vec_hand1 );
-   vector_t* vec_hand2 = ALLOC( sizeof(vector_hand2) );
-   memcpy( vec_hand2, vector_hand2, sizeof(vector_hand2) );
-   initSymbol( sym_hand2, vec_hand2 );
-
-   uint16_t last_spawn_angle = 0;
-   uint16_t last_angle = 0;
-   symbol_t* lat_symbols[] = {sym_latinum1, sym_latinum2, sym_latinum3};
-
-   spinner_vector_angle( true );
-   drawCountdown(20);
-
-   uint16_t ear_tick = system_tick - SECONDS(3);
-   bool active_right_ear = false;
-   uint16_t tickle_angle = 0;
-   uint8_t tickle = 0;
-
-   while ( drawCountdown(0) ) {
-  
-      waitAnimate(0);
-      drawScore( score, false );
-
-      if ( system_tick - ear_tick > SECONDS(3) ) {
-         ear_tick = system_tick;
-
-         active_right_ear = rand8() & 0x01;
-         if ( active_right_ear ) {
-            colorize( vec_ear1, sizeof(vector_ear1)/sizeof(vector_t), SEGA_COLOR_MAGENTA );
-            colorize( vec_ear2, sizeof(vector_ear2)/sizeof(vector_t), SEGA_COLOR_ORANGE );
-         } else {
-            colorize( vec_ear1, sizeof(vector_ear1)/sizeof(vector_t), SEGA_COLOR_ORANGE );
-            colorize( vec_ear2, sizeof(vector_ear2)/sizeof(vector_t), SEGA_COLOR_MAGENTA );
-         }
-      }
-
-      uint16_t angle = spinner_vector_angle( false );
-      static uint16_t l_angle = 0xffff;
-      if (angle == l_angle) continue;
-      l_angle = angle;
-
-      bool in_right_ear = (angle > SEGA_ANGLE(49) && angle < SEGA_ANGLE(102));
-      bool in_left_ear  = (angle > SEGA_ANGLE(260) && angle < SEGA_ANGLE(317));
-
-      tickle = 0;
-      if (angle > tickle_angle + SEGA_ANGLE(15) || 
-          angle < tickle_angle - SEGA_ANGLE(15) ) {
-         tickle_angle = angle;
-         if (in_left_ear && !active_right_ear) tickle = 1;
-         if (in_right_ear && active_right_ear) tickle = 2;
-      }
-
-      drawHand( angle, tickle );
-
-      if ( tickle ) {
-         score++;
-         drawExpression( vec_expression, HAPPY );
-      } else {
-         if ( angle == tickle_angle ) {
-            drawExpression( vec_expression, ANGRY );
-         }
-      }
-
-   }
-
-
-   sym_latinum1->visible = false;
-   sym_latinum2->visible = false;
-   sym_latinum3->visible = false;
-   sym_hand1->visible = false;
-   sym_hand2->visible = false;
-   colorize( vec_ear1, sizeof(vector_ear1)/sizeof(vector_t), SEGA_COLOR_ORANGE );
-   colorize( vec_ear2, sizeof(vector_ear2)/sizeof(vector_t), SEGA_COLOR_ORANGE );
-
-   drawExpression( vec_expression, HAPPY );
-   delay(1000);
-   say(FERENGI_OOMOX);
-   delay(6000);
-
-   sym_head->visible = false;
-   sym_ear1->visible = false;
-   sym_ear2->visible = false;
-   sym_shirt->visible = false;
-   sym_expression->visible = false;
-   FREE( vec_latinum );
-   FREE( vec_head );
-   FREE( vec_ear1 );
-   FREE( vec_ear2 );
-   FREE( vec_shirt );
-   FREE( vec_expression );
-   FREE( vec_hand1 );
-   FREE( vec_hand2 );
-}
 
 
 static uint8_t high_index = 0;
@@ -1075,9 +620,9 @@ static void beginPlay(void) {
 
 static bool drawPlay(void) {
 
-   shirtGame();
+   // shirtGame();
 
-   ferengiGame();
+   // ferengiGame();
 
    crystalGame();
 
@@ -1232,4 +777,3 @@ void main(void) {
    }
 
 }
-

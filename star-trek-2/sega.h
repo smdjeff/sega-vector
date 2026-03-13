@@ -308,6 +308,36 @@ typedef enum {
 
 
 ////////////////////////////////////
+// games
+void shirtGame( void ); 
+void crystalGame( void );
+void ferengiGame( void ); 
+
+
+////////////////////////////////////
+// externs to main
+void say(uint8_t i);
+uint16_t spinner_vector_angle( bool reset );
+void waitAnimate( uint16_t ticks );
+void delay(uint16_t ms);
+
+extern volatile uint16_t system_tick;
+extern uint16_t score;
+
+extern uint8_t* heap;
+
+extern vector_t* vec_box;
+extern vector_t* vec_string1;
+extern vector_t* vec_string2;
+extern vector_t* vec_string3;
+
+extern symbol_t *const symbols;
+extern symbol_t* sym_string1;
+extern symbol_t* sym_string2;
+extern symbol_t* sym_string3;
+
+
+////////////////////////////////////
 // math.h
 uint8_t rand8(void);
 uint16_t rand16(void);
