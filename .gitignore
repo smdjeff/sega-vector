@@ -1,6 +1,7 @@
 .DS_Store
 *.lis
 .idea/
+main.ini
 **/dump/
 **/cfg/
 /tools/dump.bin

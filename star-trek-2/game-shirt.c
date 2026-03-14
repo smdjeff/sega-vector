@@ -23,13 +23,17 @@ static const int16_t SHIRT_X[3] = { CENTER_X-300, CENTER_X, CENTER_X+300 };
 #define ARC_SPEED         10
 
 void shirtGame( void ) {
+
+   const char s1[] = "red shirt guy always dies";
+   vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
+   drawString( sym_string1, vec_string1, CENTER_X-460, MIN_Y+40, 0x40, SEGA_COLOR_YELLOW, s1 );
+
    vector_t* vec_shirt_yellow = ALLOC( sizeof(vector_shirt_yellow) );
    memcpy( vec_shirt_yellow, vector_shirt_yellow, sizeof(vector_shirt_yellow) );
    vector_t* vec_shirt_blue = ALLOC( sizeof(vector_shirt_blue) );
    memcpy( vec_shirt_blue, vector_shirt_blue, sizeof(vector_shirt_blue) );
    vector_t* vec_shirt_red = ALLOC( sizeof(vector_shirt_red) );
    memcpy( vec_shirt_red, vector_shirt_red, sizeof(vector_shirt_red) );
-
 
    symbol_t* slots[3] = { sym_shirt1, sym_shirt2, sym_shirt3 };
 
@@ -108,9 +112,11 @@ void shirtGame( void ) {
 
    }
 
+   sym_string1->visible = false;
    sym_shirt1->visible = false;
    sym_shirt2->visible = false;
    sym_shirt3->visible = false;
+   FREE( vec_string1 );
    FREE( vec_shirt_yellow );
    FREE( vec_shirt_blue );
    FREE( vec_shirt_red );

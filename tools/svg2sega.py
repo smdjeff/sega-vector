@@ -436,11 +436,40 @@ def simplify_rdp(pts, eps):
     return [pts[i] for i in keep]
 
 
+def circle_to_path(circle, segments=32):
+    cx = float(circle.getAttribute("cx") or 0)
+    cy = float(circle.getAttribute("cy") or 0)
+    r  = float(circle.getAttribute("r")  or 0)
+    if r <= 0:
+        return None
+
+    transform = circle.getAttribute("transform")
+    tcx, tcy, angle, sx, sy = parse_transform(transform)
+
+    pts = []
+    for i in range(segments + 1):
+        a = 2 * math.pi * i / segments
+        x = cx + r * math.cos(a)
+        y = cy + r * math.sin(a)
+        if sx != 1.0 or sy != 1.0:
+            x, y = apply_scale(x, y, tcx, tcy, sx, sy)
+        if angle:
+            x, y = apply_rotation(x, y, tcx, tcy, angle)
+        pts.append((x, y))
+
+    d = f"M {pts[0][0]} {pts[0][1]}"
+    for x, y in pts[1:]:
+        d += f" L {x} {y}"
+    return d
+
+
 def element_to_path_d(element):
     if element.tagName == "polyline":
         return polyline_to_path(element)
     if element.tagName == "polygon":
         return polygon_to_path(element)
+    if element.tagName == "circle":
+        return circle_to_path(element)
     return element.getAttribute("d")
 
 
@@ -489,7 +518,8 @@ doc = minidom.parse(args.filename)
 paths = doc.getElementsByTagName("path")
 polylines = doc.getElementsByTagName("polyline")
 polygons = doc.getElementsByTagName("polygon")
-elements = list(paths) + list(polylines) + list(polygons)
+circles = doc.getElementsByTagName("circle")
+elements = list(paths) + list(polylines) + list(polygons) + list(circles)
 
 # PASS 1: build raw strokes (translated but not centered), and compute bounds
 raw_strokes = []

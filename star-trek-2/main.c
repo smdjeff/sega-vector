@@ -620,9 +620,9 @@ static void beginPlay(void) {
 
 static bool drawPlay(void) {
 
-   // shirtGame();
+   shirtGame();
 
-   // ferengiGame();
+   ferengiGame();
 
    crystalGame();
 
@@ -630,6 +630,8 @@ static bool drawPlay(void) {
 }
 
 static void beginGameOver(void) {
+   sym_counter->visible = false;
+
    if ( score <= high_score[2] ) {
       const char s[] = "game over";
       vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
