@@ -136,6 +136,7 @@ void say(uint8_t i) {
 
 
 vector_t* vectors     = NULL;
+vector_t* vec_blank   = NULL;
 vector_t* vec_line    = NULL;
 vector_t* vec_box     = NULL;
 vector_t* vec_score   = NULL;
@@ -158,6 +159,9 @@ void initVectors(void) {
 
    vector_t* vec = vectors;
 
+   vec_blank = vec;
+   initVector( vec, 0, SEGA_ANGLE(0), SEGA_COLOR_GRAY|SEGA_LAST ); vec++;
+
    vec_line = vec;
    initVector( vec, 0xFF, SEGA_ANGLE(0), SEGA_COLOR_YELLOW|SEGA_LAST ); vec++;
 
@@ -173,6 +177,7 @@ void initVectors(void) {
 symbol_t *const symbols = (symbol_t*)(VECTOR_RAM); // must be at the top of vector ram
 
 uint8_t symbols_count;
+symbol_t* sym_last;
 symbol_t* sym_score;
 symbol_t* sym_counter;
 symbol_t* sym_string1;
@@ -232,11 +237,16 @@ void initSymbols(void) {
    sym_crystal2   = &symbols[symbols_count++];
    sym_crystal3   = &symbols[symbols_count++];
 
+   // blank screen shouldn't be nil, otherwise you get a dot on scren
+   sym_last       = &symbols[symbols_count++];
+
    symbol_t* const end = symbols + symbols_count;
    for (symbol_t* sym = symbols; sym < end; sym++) {
-      initSymbol(sym, vec_box);
+      initSymbol(sym, vec_blank);
    }
+
    symbols[symbols_count-1].last = true;
+   symbols[symbols_count-1].visible = true;
 
    heap = (uint8_t*)&symbols[symbols_count];
    uint16_t used = (uint16_t)heap - VECTOR_RAM;
