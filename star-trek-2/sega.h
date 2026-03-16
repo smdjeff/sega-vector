@@ -243,7 +243,7 @@ typedef struct {
 #define SCORE_TEXT_X    (MAX_X-100)
 #define SCORE_TEXT_Y    (MAX_Y-60)
 #define SCORE_TEXT_SIZE 0x80
-#define TIMER_TEXT_Y    (MAX_Y-80)
+#define TIMER_TEXT_Y    (MAX_Y-60)
 #define TIMER_TEXT_SIZE 0xF0
 
 #define HITBOX_SZ       60

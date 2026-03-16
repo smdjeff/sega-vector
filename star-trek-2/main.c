@@ -379,7 +379,7 @@ static bool drawAttract( void ) {
          setTrajectory( SID(sym_logo), 4, SEGA_ANGLE(270) );
          const char s[] = "game over";
          vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-         drawString( sym_string1, vec_string1, CENTER_X-100, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_WHITE, s );
+         drawString( sym_string1, vec_string1, CENTER_X-130, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_WHITE, s );
          last_tick = system_tick;
          state++;
          break; }
