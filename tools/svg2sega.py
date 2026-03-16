@@ -35,6 +35,8 @@ parser.add_argument(      '--speed', type=int, default=10, help='0=full, 1=slow 
 parser.add_argument(      '--close', action='store_true', help='close window on complete')
 parser.add_argument(      '--origin-left', action='store_true',
                     help='set origin to left-center of artwork (accounts for --rotate and --scale)')
+parser.add_argument(      '--origin-top-left', action='store_true',
+                    help='set origin to top-left of artwork; final position is top-right (consistent baseline for font glyphs)')
 args = parser.parse_args()
 
 # Used to detect breaks between subpaths.
@@ -568,8 +570,15 @@ for element in elements:
 if minx == float("inf"):
     cx = cy = 0.0
 else:
-    cx = minx if args.origin_left else (minx + maxx) / 2.0
-    cy = (miny + maxy) / 2.0
+    if args.origin_top_left:
+        cx = minx
+        cy = miny
+    elif args.origin_left:
+        cx = minx
+        cy = (miny + maxy) / 2.0
+    else:
+        cx = (minx + maxx) / 2.0
+        cy = (miny + maxy) / 2.0
 
 # PASS 2: center into final strokes
 strokes = []
@@ -666,8 +675,14 @@ base = os.path.basename(args.filename)
 name = os.path.splitext(base)[0]
 macro = re.sub(r'[^A-Za-z0-9]+', '_', name).strip('_').upper()
 
-# return to center to make subsequent draws easier
-printSegaVector(sega_color | 0x80, x3, y3, 0.0, 0.0)
+# return to origin (or bottom-right for --origin-bottom-left) to make subsequent draws easier
+if args.origin_top_left and minx != float("inf"):
+    final_x = maxx - cx + 25   # width + letter gap
+    final_y = 0.0               # top-right: same y as origin
+else:
+    final_x = 0.0
+    final_y = 0.0
+printSegaVector(sega_color | 0x80, x3, y3, final_x, final_y)
 print(f'#define V_{macro}_SZ {sega_vector_count}')
 
 doc.unlink()
