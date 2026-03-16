@@ -153,8 +153,7 @@ void initVectors(void) {
    if ( vectors ) {
       heap_free( heap, vectors );
    }
-   vectors = heap_alloc( heap, sizeof(vector_t)*(2+5) );
-   writeDebug('e',vectors);
+   vectors = heap_alloc( heap, sizeof(vector_t)*(1+1+5) );
    if ( !vectors ) kill( 0x01 );
 
    vector_t* vec = vectors;
@@ -177,7 +176,6 @@ void initVectors(void) {
 symbol_t *const symbols = (symbol_t*)(VECTOR_RAM); // must be at the top of vector ram
 
 uint8_t symbols_count;
-symbol_t* sym_last;
 symbol_t* sym_score;
 symbol_t* sym_counter;
 symbol_t* sym_string1;
@@ -205,6 +203,8 @@ symbol_t* sym_jar;
 symbol_t* sym_crystal1;
 symbol_t* sym_crystal2;
 symbol_t* sym_crystal3;
+
+symbol_t* sym_last;
 
 void initSymbols(void) {
 
@@ -237,7 +237,7 @@ void initSymbols(void) {
    sym_crystal2   = &symbols[symbols_count++];
    sym_crystal3   = &symbols[symbols_count++];
 
-   // blank screen shouldn't be nil, otherwise you get a dot on scren
+   // blank screen shouldn't be nil, otherwise you get a dot on screen
    sym_last       = &symbols[symbols_count++];
 
    symbol_t* const end = symbols + symbols_count;
@@ -245,8 +245,8 @@ void initSymbols(void) {
       initSymbol(sym, vec_blank);
    }
 
-   symbols[symbols_count-1].last = true;
-   symbols[symbols_count-1].visible = true;
+   sym_last->last = true;
+   sym_last->visible = true;
 
    heap = (uint8_t*)&symbols[symbols_count];
    uint16_t used = (uint16_t)heap - VECTOR_RAM;
@@ -385,7 +385,7 @@ static bool drawAttract( void ) {
          break; }
       
       case 1:
-         if ( system_tick - last_tick > SECONDS(3) ) {
+         if ( system_tick - last_tick > SECONDS(6) ) {
             sym_string1->visible = false;
             FREE( vec_string1 );
             state++;
@@ -435,7 +435,7 @@ static bool drawAttract( void ) {
                drawString( sym_string1, vec_string1, CENTER_X-150, CENTER_Y+100, 0xA0, SEGA_COLOR_MAGENTA, s );
                break; }
          }
-         char s[9] = "abc 1234";
+         char s[] = "abc 1234";
          memcpy( &s[0], high_name[2-state_ix], 3 );
          dec4( &s[4], high_score[2-state_ix] );
          vec_string2 = ALLOC( measureString(s) * sizeof(vector_t) );         
@@ -502,8 +502,8 @@ static void beginDrawInitials( void ) {
    initials_last_ch = 0;
    memcpy( initials, "   ", 3 );
    const char s[] = "888";
-   vec_length = measureString(s) * sizeof(vector_t);
-   vec_string3 = ALLOC( vec_length );
+   vec_length = measureString(s);
+   vec_string3 = ALLOC( vec_length * sizeof(vector_t) );
    redrawString();
    spinner_vector_angle( true );
 
@@ -591,12 +591,12 @@ void drawScore( uint16_t score, bool reset ) {
    }
 }
 
-uint8_t drawCountdown( uint8_t initValue ) {
+uint8_t drawCountdown( uint8_t initValue, bool speak ) {
    static uint16_t last_tick = 0;
    static uint8_t value = 0;
    if ( initValue ) {
-      last_tick = system_tick;
-      value = initValue;
+      last_tick = 0; // draw immediately
+      value = initValue + 1;
       if ( !vec_counter ) {
          const char s[] = "88";
          vec_counter = ALLOC( measureString(s) * sizeof(vector_t) );
@@ -608,11 +608,13 @@ uint8_t drawCountdown( uint8_t initValue ) {
       char s[3] = {0,};
       dec2( s, value );
       drawString( sym_counter, vec_counter, CENTER_X-480, CENTER_Y+200, 0xF0, SEGA_COLOR_YELLOW, s );
-      if ( value == 5 ) say( COUNT_5 );
-      else if ( value == 4 ) say( COUNT_4 );
-      else if ( value == 3 ) say( COUNT_3 );
-      else if ( value == 2 ) say( COUNT_2 );
-      else {
+      if ( speak ) {
+         if ( value == 5 ) say( COUNT_5 );
+         else if ( value == 4 ) say( COUNT_4 );
+         else if ( value == 3 ) say( COUNT_3 );
+         else if ( value == 2 ) say( COUNT_2 );
+      }
+      if ( !initValue ) {
          SOUND_COMMAND = SAUCER_EXIT;
          delay(25);
          SOUND_COMMAND = SAUCER_EXIT_END;
