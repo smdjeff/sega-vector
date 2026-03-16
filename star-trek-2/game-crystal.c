@@ -82,10 +82,6 @@ static void ringPush( uint16_t angle, int16_t* cx, int16_t* cy ) {
 
 void crystalGame( void ) {
 
-   const char s1[] = "stabilize dilithium crystal";
-   vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
-   drawString( sym_string1, vec_string1, CENTER_X-460, MIN_Y+40, 0x40, SEGA_COLOR_YELLOW, s1 );
-
    // === Allocate and copy vector art ===
    vector_t* vec_jar = ALLOC( sizeof(vector_jar) );
    memcpy( vec_jar, vector_jar, sizeof(vector_jar) );
@@ -134,6 +130,13 @@ void crystalGame( void ) {
                   CRYSTAL_SLOT_ROT[i], 0x60 );
    }
 
+   const char s1[] = "stabilize dilithium crystal";
+   vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
+   drawString( sym_string1, vec_string1, CENTER_X-460, MIN_Y+40, 0x80, SEGA_COLOR_YELLOW, s1 );
+   delay(3000);
+   sym_string1->visible = false;
+   FREE( vec_string1 );
+
    say( POWER_FAILED );
    delay( 800 );
 
@@ -150,12 +153,12 @@ void crystalGame( void ) {
    SOUND_COMMAND = NOMAD_MOTION_END;
 
    spinner_vector_angle( true );
-   drawCountdown( 20 );
+   drawCountdown( 25, false );
 
    uint8_t locked_count = 0;
 
    for ( uint8_t ci = 0; ci < 3; ci++ ) {
-      if ( !drawCountdown(0) ) break;
+      if ( !drawCountdown(0,true) ) break;
 
       // --- Show ghost crystal at target slot ---
       memcpy( vec_ghost, vec_c[ci], crystal_bytes[ci] );
@@ -185,7 +188,7 @@ void crystalGame( void ) {
       uint8_t prev_buttons = 0;
       uint16_t drift_tick = system_tick;
 
-      while ( !locked && drawCountdown(0) ) {
+      while ( !locked && drawCountdown(0,true) ) {
 
          waitAnimate(0);
          drawScore( score, false );
@@ -309,7 +312,7 @@ void crystalGame( void ) {
       {
          const char s[] = "matrix stable";
          vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-         drawString( sym_string1, vec_string1, CENTER_X-280, MIN_Y+40, 0x90, SEGA_COLOR_GREEN, s );
+         drawString( sym_string1, vec_string1, CENTER_X-250, MIN_Y+40, 0x90, SEGA_COLOR_GREEN, s );
       }
       waitAnimate( SECONDS(3) );
 

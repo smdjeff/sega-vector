@@ -142,19 +142,6 @@ static void drawHand(uint16_t vec_angle, uint8_t tickle) {
 
 void ferengiGame( void ) {
 
-   const char s1[] = "rub the lobes";
-   // const char s2[] = "oomox for latinum bars";
-   vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
-   drawString( sym_string1, vec_string1, CENTER_X-460, MIN_Y+40, 0x40, SEGA_COLOR_YELLOW, s1 );
-   // vec_string2 = ALLOC( measureString(s2) * sizeof(vector_t) );
-   // drawString( sym_string2, vec_string2, CENTER_X-460, MIN_Y+40-40, 0x40, SEGA_COLOR_YELLOW, s2 );
-
-   vector_t* vec_latinum = ALLOC( sizeof(vector_latinum) );
-   memcpy( vec_latinum, vector_latinum, sizeof(vector_latinum) );
-   initSymbol( sym_latinum1, vec_latinum );
-   initSymbol( sym_latinum2, vec_latinum );
-   initSymbol( sym_latinum3, vec_latinum );
-
    vector_t* vec_head = ALLOC( sizeof(vector_head) );
    memcpy( vec_head, vector_head, sizeof(vector_head) );
    drawSymbol( sym_head, vec_head, CENTER_X, CENTER_Y+100, SEGA_ANGLE(0), 0x80 );
@@ -175,6 +162,25 @@ void ferengiGame( void ) {
    memcpy( vec_expression, vector_expression2, sizeof(vector_expression2) );
    drawSymbol( sym_expression, vec_expression, CENTER_X+20, CENTER_Y+70, SEGA_ANGLE(0), 0x80 );
 
+   const char s1[] = "rub the lobes";
+   const char s2[] = "oomox for latinum bars";
+   vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
+   vec_string2 = ALLOC( measureString(s2) * sizeof(vector_t) );
+   drawString( sym_string1, vec_string1, CENTER_X-200, MIN_Y+40, 0x80, SEGA_COLOR_YELLOW, s1 );
+   delay(3000);
+   sym_string1->visible = false;
+   drawString( sym_string2, vec_string2, CENTER_X-360, MIN_Y+40, 0x80, SEGA_COLOR_YELLOW, s2 );
+   delay(3000);
+   sym_string2->visible = false;
+   FREE( vec_string1 );
+   FREE( vec_string2 );
+
+   vector_t* vec_latinum = ALLOC( sizeof(vector_latinum) );
+   memcpy( vec_latinum, vector_latinum, sizeof(vector_latinum) );
+   initSymbol( sym_latinum1, vec_latinum );
+   initSymbol( sym_latinum2, vec_latinum );
+   initSymbol( sym_latinum3, vec_latinum );
+
    vector_t* vec_hand1 = ALLOC( sizeof(vector_hand1) );
    memcpy( vec_hand1, vector_hand1, sizeof(vector_hand1) );
    initSymbol( sym_hand1, vec_hand1 );
@@ -187,14 +193,14 @@ void ferengiGame( void ) {
    symbol_t* lat_symbols[] = {sym_latinum1, sym_latinum2, sym_latinum3};
 
    spinner_vector_angle( true );
-   drawCountdown(20);
+   drawCountdown(20,false);
 
    uint16_t ear_tick = system_tick - SECONDS(3);
    bool active_right_ear = false;
    uint16_t tickle_angle = 0;
    uint8_t tickle = 0;
 
-   while ( drawCountdown(0) ) {
+   while ( drawCountdown(0,false) ) {
   
       waitAnimate(0);
       drawScore( score, false );
@@ -242,8 +248,6 @@ void ferengiGame( void ) {
    }
 
 
-   sym_string1->visible = false;
-   // sym_string2->visible = false;
    sym_latinum1->visible = false;
    sym_latinum2->visible = false;
    sym_latinum3->visible = false;
@@ -262,8 +266,6 @@ void ferengiGame( void ) {
    sym_ear2->visible = false;
    sym_shirt->visible = false;
    sym_expression->visible = false;
-   FREE( vec_string1 );
-   // FREE( vec_string2 );
    FREE( vec_latinum );
    FREE( vec_head );
    FREE( vec_ear1 );

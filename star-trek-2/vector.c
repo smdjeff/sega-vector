@@ -91,7 +91,6 @@ void animate(uint16_t system_tick, symbol_t* symbols, uint8_t symbol_count) {
       if ( sym->visible ) {
          motion_t *m = &motion[ i ];
          if ( m->slow && ((system_tick & 0x0003) != 0) ) continue;
-         sym->y += m->y_speed;
          sym->rotation = (sym->rotation + m->rotation_speed) & 0x03FF;
          uint8_t last_scale = sym->scale;
          if ( m->resize_speed ) {

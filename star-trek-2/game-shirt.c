@@ -18,15 +18,12 @@ extern symbol_t* sym_shirt1;
 extern symbol_t* sym_shirt2;
 extern symbol_t* sym_shirt3;
 
+static const uint16_t SHIRT_Y = CENTER_Y - 50;
 static const int16_t SHIRT_X[3] = { CENTER_X-300, CENTER_X, CENTER_X+300 };
-#define SHIRT_MOVE_TICKS  10
-#define ARC_SPEED         10
+#define SHIRT_SPEED  40
+#define ARC_SPEED    20
 
 void shirtGame( void ) {
-
-   const char s1[] = "red shirt guy always dies";
-   vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
-   drawString( sym_string1, vec_string1, CENTER_X-460, MIN_Y+40, 0x40, SEGA_COLOR_YELLOW, s1 );
 
    vector_t* vec_shirt_yellow = ALLOC( sizeof(vector_shirt_yellow) );
    memcpy( vec_shirt_yellow, vector_shirt_yellow, sizeof(vector_shirt_yellow) );
@@ -37,19 +34,32 @@ void shirtGame( void ) {
 
    symbol_t* slots[3] = { sym_shirt1, sym_shirt2, sym_shirt3 };
 
-   drawCountdown( 20 );
-   while ( drawCountdown(0) ) {
+   drawSymbol( sym_shirt1, vec_shirt_yellow, SHIRT_X[0], SHIRT_Y, SEGA_ANGLE(0), 0x80 );
+   drawSymbol( sym_shirt2, vec_shirt_blue,   SHIRT_X[1], SHIRT_Y, SEGA_ANGLE(0), 0x80 );
+   drawSymbol( sym_shirt3, vec_shirt_red,    SHIRT_X[2], SHIRT_Y, SEGA_ANGLE(0), 0x80 );
+
+   drawCountdown( 20, false );
+
+   const char s1[] = "red shirt always dies";
+   vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
+   drawString( sym_string1, vec_string1, CENTER_X-460, MIN_Y+40, 0x80, SEGA_COLOR_YELLOW, s1 );
+   delay(3000);
+   sym_string1->visible = false;
+   FREE( vec_string1 );
+
+   drawCountdown( 20, false );
+
+   while ( drawCountdown(0, false) ) {
 
       sym_box->visible = false;
 
-      drawSymbol( sym_shirt1, vec_shirt_yellow, SHIRT_X[0], CENTER_Y, SEGA_ANGLE(0), 0x80 );
-      drawSymbol( sym_shirt2, vec_shirt_blue,   SHIRT_X[1], CENTER_Y, SEGA_ANGLE(0), 0x80 );
-      drawSymbol( sym_shirt3, vec_shirt_red,    SHIRT_X[2], CENTER_Y, SEGA_ANGLE(0), 0x80 );
+      drawSymbol( sym_shirt1, vec_shirt_yellow, SHIRT_X[0], SHIRT_Y, SEGA_ANGLE(0), 0x80 );
+      drawSymbol( sym_shirt2, vec_shirt_blue,   SHIRT_X[1], SHIRT_Y, SEGA_ANGLE(0), 0x80 );
+      drawSymbol( sym_shirt3, vec_shirt_red,    SHIRT_X[2], SHIRT_Y, SEGA_ANGLE(0), 0x80 );
 
-      for (uint8_t i=0; i<4; i++) {
-         int8_t arc[3];
-         int8_t vx_saved[3];
+      for (uint8_t i = 0; i < 4; i++) {
 
+         // shuffle which shirt goes to which slot
          for (uint8_t j = 2; j > 0; j--) {
             uint8_t r = rand8() % (j + 1);
             symbol_t* temp = slots[j];
@@ -57,27 +67,50 @@ void shirtGame( void ) {
             slots[r] = temp;
          }
 
+         // compute move parameters for each shirt
+         int8_t  vx[3], vy[3];
+         int16_t mid_x[3];
+         uint8_t arc_flipped[3];
+
          for (uint8_t s = 0; s < 3; s++) {
-            symbol_t* sym = slots[s];
-            int16_t dx  = SHIRT_X[s] - sym->x;
-            vx_saved[s] = dx / SHIRT_MOVE_TICKS;
-            arc[s]      = (dx > 0) ? -ARC_SPEED : (dx < 0) ? ARC_SPEED : 0;
-            setSpeeds( SID(sym), vx_saved[s], arc[s] );
+            int16_t cur_x = (int16_t)slots[s]->x;
+            int16_t dx    = SHIRT_X[s] - cur_x;
+            mid_x[s]       = cur_x + dx / 2;
+            vx[s]          = (dx > 0) ? SHIRT_SPEED : (dx < 0) ? -SHIRT_SPEED : 0;
+            vy[s]          = (dx != 0) ? ARC_SPEED : 0;
+            arc_flipped[s] = (vx[s] == 0) ? 1 : 0;
+            setSpeeds( SID(slots[s]), vx[s], vy[s] );
          }
 
          SOUND_COMMAND = PHASER;
-         waitAnimate( SECONDS(0.125) );
 
-         for (uint8_t s = 0; s < 3; s++) {
-            setSpeeds( SID(slots[s]), vx_saved[s], -arc[s] );
-         }
+         // animate each shirt to its target; stop it the moment it arrives
+         uint8_t n_moving = 0;
+         for (uint8_t s = 0; s < 3; s++) if (vx[s] != 0) n_moving++;
 
-         waitAnimate( SECONDS(0.125) );
-
-         for (uint8_t s = 0; s < 3; s++) {
-            slots[s]->x = SHIRT_X[s];
-            slots[s]->y = CENTER_Y;
-            setStop( SID(slots[s]) );
+         while (n_moving > 0) {
+            waitAnimate(1);
+            for (uint8_t s = 0; s < 3; s++) {
+               if (vx[s] == 0) continue;
+               int16_t cur_x = (int16_t)slots[s]->x;
+               // flip arc direction at the midpoint
+               if ( !arc_flipped[s] ) {
+                  bool past_mid = (vx[s] > 0) ? (cur_x >= mid_x[s]) : (cur_x <= mid_x[s]);
+                  if ( past_mid ) {
+                     arc_flipped[s] = 1;
+                     setSpeeds( SID(slots[s]), vx[s], -vy[s] );
+                  }
+               }
+               // snap and stop this shirt the moment it reaches its target
+               if ( (vx[s] > 0 && cur_x >= SHIRT_X[s]) ||
+                    (vx[s] < 0 && cur_x <= SHIRT_X[s]) ) {
+                  slots[s]->x = SHIRT_X[s];
+                  slots[s]->y = SHIRT_Y;
+                  setStop( SID(slots[s]) );
+                  vx[s] = 0;
+                  n_moving--;
+               }
+            }
          }
       }
 
@@ -105,8 +138,8 @@ void shirtGame( void ) {
          uint16_t angle = spinner_vector_angle( false );
          int16_t dx, dy;
          vectorToXY(angle, 500, &dx, &dy);
-         drawSymbol( sym_box, vec_box, CENTER_X+dx, CENTER_Y, SEGA_ANGLE(0), 0xff );
-      } while ( drawCountdown(0) );
+         drawSymbol( sym_box, vec_box, CENTER_X+dx, SHIRT_Y, SEGA_ANGLE(0), 0xff );
+      } while ( drawCountdown(0,false) );
 
       sym_box->visible = false;
 

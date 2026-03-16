@@ -14,7 +14,7 @@
 #define MSB(x)             (uint8_t)(((uint16_t)(x) >> 8) & 0xFF)
 #define LE(x)              LSB(x), MSB(x)
 #define SECONDS(s)         ((s)*1000/25)
-#define ALLOC(sz)          heap_alloc( heap, sz )
+#define ALLOC(sz)          _alloc_or_kill( heap_alloc( heap, sz ), __LINE__ )
 #define FREE(p)            if (p) { heap_free( heap, p ); p=NULL; }
 #define SID(s)             ((s)-symbols)
 #define ABS(x)             ((x)<0?-(x):(x))
@@ -361,7 +361,7 @@ uint16_t fontAddress( char c );
 void drawString( symbol_t *const sym, vector_t *const vec, uint16_t x, uint16_t y, uint8_t scale, uint8_t color, const char *const str);
 uint16_t measureString(const char *str) __z88dk_fastcall;
 void drawScore( uint16_t score, bool reset );
-uint8_t drawCountdown( uint8_t initValue );
+uint8_t drawCountdown( uint8_t initValue, bool speak );
 void hex16( char *s, uint16_t value);
 void dec2(char *s, uint8_t value);
 void dec4(char *s, uint16_t value);
@@ -449,5 +449,7 @@ void beginDiagnosticsGrid( void );
    #define kill(x) do {} while(0)
 
 #endif
+
+static inline void* _alloc_or_kill( void* p, uint16_t code ) { if (!p) kill(code); return p; }
 
 #endif //_SEGA_H_
