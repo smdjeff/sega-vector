@@ -116,49 +116,47 @@ const uint8_t font_data_z[] = {
 typedef struct {
     const vector_t *data;
     uint8_t count;
-    uint8_t ox;
-    uint8_t oy;
 } font_entry_t;
 
 const font_entry_t font_lookup[] = {
-    { (vector_t*)font_data_0, sizeof(font_data_0)/4, 35, 0 },
-    { (vector_t*)font_data_1, sizeof(font_data_1)/4, 35, 0 },
-    { (vector_t*)font_data_2, sizeof(font_data_2)/4, 35, 0 },
-    { (vector_t*)font_data_3, sizeof(font_data_3)/4, 35, 0 },
-    { (vector_t*)font_data_4, sizeof(font_data_4)/4, 35, 0 },
-    { (vector_t*)font_data_5, sizeof(font_data_5)/4, 35, 0 },
-    { (vector_t*)font_data_6, sizeof(font_data_6)/4, 35, 0 },
-    { (vector_t*)font_data_7, sizeof(font_data_7)/4, 35, 0 },
-    { (vector_t*)font_data_8, sizeof(font_data_8)/4, 35, 0 },
-    { (vector_t*)font_data_9, sizeof(font_data_9)/4, 35, 0 },
+    { (vector_t*)font_data_0, sizeof(font_data_0)/4},
+    { (vector_t*)font_data_1, sizeof(font_data_1)/4},
+    { (vector_t*)font_data_2, sizeof(font_data_2)/4},
+    { (vector_t*)font_data_3, sizeof(font_data_3)/4},
+    { (vector_t*)font_data_4, sizeof(font_data_4)/4},
+    { (vector_t*)font_data_5, sizeof(font_data_5)/4},
+    { (vector_t*)font_data_6, sizeof(font_data_6)/4},
+    { (vector_t*)font_data_7, sizeof(font_data_7)/4},
+    { (vector_t*)font_data_8, sizeof(font_data_8)/4},
+    { (vector_t*)font_data_9, sizeof(font_data_9)/4},
 
-    { (vector_t*)font_data_a, sizeof(font_data_a)/4, 35, 0 },
-    { (vector_t*)font_data_b, sizeof(font_data_b)/4, 35, 0 },
-    { (vector_t*)font_data_c, sizeof(font_data_c)/4, 35, 0 },
-    { (vector_t*)font_data_d, sizeof(font_data_d)/4, 35, 0 },
-    { (vector_t*)font_data_e, sizeof(font_data_e)/4, 35, 0 },
-    { (vector_t*)font_data_f, sizeof(font_data_f)/4, 35, 0 },
-    { (vector_t*)font_data_g, sizeof(font_data_g)/4, 35, 0 },
-    { (vector_t*)font_data_h, sizeof(font_data_h)/4, 35, 0 },
-    { (vector_t*)font_data_i, sizeof(font_data_i)/4, 35, 0 },
-    { (vector_t*)font_data_j, sizeof(font_data_j)/4, 35, 0 },
-    { (vector_t*)font_data_k, sizeof(font_data_k)/4, 35, 0 },
-    { (vector_t*)font_data_l, sizeof(font_data_l)/4, 35, 0 },
-    { (vector_t*)font_data_m, sizeof(font_data_m)/4, 35, 0 },
-    { (vector_t*)font_data_n, sizeof(font_data_n)/4, 35, 0 },
-    { (vector_t*)font_data_o, sizeof(font_data_o)/4, 35, 0 },
-    { (vector_t*)font_data_p, sizeof(font_data_p)/4, 35, 0 },
-    { (vector_t*)font_data_q, sizeof(font_data_q)/4, 35, 0 },
-    { (vector_t*)font_data_r, sizeof(font_data_r)/4, 35, 0 },
-    { (vector_t*)font_data_s, sizeof(font_data_s)/4, 35, 0 },
-    { (vector_t*)font_data_t, sizeof(font_data_t)/4, 35, 0 },
-    { (vector_t*)font_data_u, sizeof(font_data_u)/4, 35, 0 },
-    { (vector_t*)font_data_v, sizeof(font_data_v)/4, 35, 0 },
-    { (vector_t*)font_data_w, sizeof(font_data_w)/4, 35, 0 },
-    { (vector_t*)font_data_x, sizeof(font_data_x)/4, 35, 0 },
-    { (vector_t*)font_data_y, sizeof(font_data_y)/4, 35, 0 },
-    { (vector_t*)font_data_z, sizeof(font_data_z)/4, 35, 0 },
-    { NULL,                   0,                     35, 0 } // space
+    { (vector_t*)font_data_a, sizeof(font_data_a)/4},
+    { (vector_t*)font_data_b, sizeof(font_data_b)/4},
+    { (vector_t*)font_data_c, sizeof(font_data_c)/4},
+    { (vector_t*)font_data_d, sizeof(font_data_d)/4},
+    { (vector_t*)font_data_e, sizeof(font_data_e)/4},
+    { (vector_t*)font_data_f, sizeof(font_data_f)/4},
+    { (vector_t*)font_data_g, sizeof(font_data_g)/4},
+    { (vector_t*)font_data_h, sizeof(font_data_h)/4},
+    { (vector_t*)font_data_i, sizeof(font_data_i)/4},
+    { (vector_t*)font_data_j, sizeof(font_data_j)/4},
+    { (vector_t*)font_data_k, sizeof(font_data_k)/4},
+    { (vector_t*)font_data_l, sizeof(font_data_l)/4},
+    { (vector_t*)font_data_m, sizeof(font_data_m)/4},
+    { (vector_t*)font_data_n, sizeof(font_data_n)/4},
+    { (vector_t*)font_data_o, sizeof(font_data_o)/4},
+    { (vector_t*)font_data_p, sizeof(font_data_p)/4},
+    { (vector_t*)font_data_q, sizeof(font_data_q)/4},
+    { (vector_t*)font_data_r, sizeof(font_data_r)/4},
+    { (vector_t*)font_data_s, sizeof(font_data_s)/4},
+    { (vector_t*)font_data_t, sizeof(font_data_t)/4},
+    { (vector_t*)font_data_u, sizeof(font_data_u)/4},
+    { (vector_t*)font_data_v, sizeof(font_data_v)/4},
+    { (vector_t*)font_data_w, sizeof(font_data_w)/4},
+    { (vector_t*)font_data_x, sizeof(font_data_x)/4},
+    { (vector_t*)font_data_y, sizeof(font_data_y)/4},
+    { (vector_t*)font_data_z, sizeof(font_data_z)/4},
+    { NULL,                   35                   } // space
 };
 
 void colorize(vector_t *vec, uint16_t len, uint8_t color) {
@@ -237,15 +235,8 @@ void drawString(symbol_t *sym, vector_t *vec, uint16_t x, uint16_t y, uint8_t sc
             memcpy(v_ptr, e->data, e->count * sizeof(vector_t));
             v_ptr += e->count;
             (v_ptr - 1)->last = 0;
-        }
-
-        if (e->oy) {
-            *(uint32_t*)v_ptr = VEC_OFF_Y(e->oy);
-            v_ptr++;
-        }
-
-        if (e->ox) {
-            *(uint32_t*)v_ptr = VEC_OFF_X(e->ox);
+        } else {
+            *(uint32_t*)v_ptr = VEC_OFF_X(e->count); // space
             v_ptr++;
         }
     }
@@ -277,10 +268,11 @@ uint16_t measureString(const char *str) __z88dk_fastcall {
         else continue;
 
         const font_entry_t *e = &font_lookup[idx];
-        
-        total += e->count;
-        if (e->oy) total++;
-        if (e->ox) total++;
+        if ( e->data ) {
+          total += e->count;
+        } else {
+          total++; // space
+        }
     }
     return total;
 }

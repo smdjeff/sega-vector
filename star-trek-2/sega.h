@@ -237,6 +237,18 @@ typedef struct {
 #define MIN_Y (1024-400) // 624
 #define MAX_Y (1024+400) // 1424
 
+#define GAME_TEXT_X     (MIN_X)
+#define GAME_TEXT_Y     (MIN_Y+70)
+#define GAME_TEXT_SIZE  0x80
+#define SCORE_TEXT_X    (MAX_X-100)
+#define SCORE_TEXT_Y    (MAX_Y-60)
+#define SCORE_TEXT_SIZE 0x80
+#define TIMER_TEXT_Y    (MAX_Y-80)
+#define TIMER_TEXT_SIZE 0xF0
+
+#define HITBOX_SZ       60
+#define MAX_SYMBOLS     32
+
 // sounds
 #define COIN_DROP    0x24
 
@@ -369,8 +381,6 @@ void colorize(vector_t *vec, uint16_t len, uint8_t color);
 
 ////////////////////////////////////
 // vector.h
-#define HITBOX_SZ 80
-#define MAX_SYMBOLS 32
 void animate(uint16_t system_tick, symbol_t* symbols, uint8_t symbol_count); 
 void resetAnimate(void);
 void setTrajectory( uint8_t sid, uint8_t velocity, uint16_t sega_angle );

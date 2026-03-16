@@ -165,11 +165,11 @@ void initVectors(void) {
    initVector( vec, 0xFF, SEGA_ANGLE(0), SEGA_COLOR_YELLOW|SEGA_LAST ); vec++;
 
    vec_box = vec;
-   initVector( vec, (80/1.4), SEGA_ANGLE(225), SEGA_CLEAR ); vec++;
-   initVector( vec, (80),     SEGA_ANGLE(0),   SEGA_COLOR_MAGENTA ); vec++;
-   initVector( vec, (80),     SEGA_ANGLE(90),  SEGA_COLOR_MAGENTA ); vec++;
-   initVector( vec, (80),     SEGA_ANGLE(180), SEGA_COLOR_MAGENTA ); vec++;
-   initVector( vec, (80),     SEGA_ANGLE(270), SEGA_COLOR_MAGENTA|SEGA_LAST );
+   initVector( vec, (HITBOX_SZ/1.4), SEGA_ANGLE(225), SEGA_CLEAR ); vec++;
+   initVector( vec, (HITBOX_SZ),     SEGA_ANGLE(0),   SEGA_COLOR_MAGENTA ); vec++;
+   initVector( vec, (HITBOX_SZ),     SEGA_ANGLE(90),  SEGA_COLOR_MAGENTA ); vec++;
+   initVector( vec, (HITBOX_SZ),     SEGA_ANGLE(180), SEGA_COLOR_MAGENTA ); vec++;
+   initVector( vec, (HITBOX_SZ),     SEGA_ANGLE(270), SEGA_COLOR_MAGENTA|SEGA_LAST );
 }
 
    
@@ -280,12 +280,12 @@ uint16_t spinner_vector_angle( bool reset ) {
       uint8_t delta = lastvalue - value;
       // spinner angle in degrees is about 5.6 * value
       // vector is SEGA_ANGLE( angle ), so 2.845 * 5.6 = ~16
-      #ifdef MAME_BUILD
+      // #ifdef MAME_BUILD
          delta >>= 1; // mame seems to increment the spinner inaccurately
-      #else
+      // #else
          // seems to work great on real hardware
-         delta <<= 4;  // x 16
-      #endif
+         // delta <<= 4;  // x 16
+      // #endif
       if (dir) {
          // only ever counts down so we have to account for direction bit
          angle += delta;
@@ -363,7 +363,7 @@ static bool drawAttract( void ) {
       last_tick = 0;
       endAttract();
       beginAttract();
-      drawSymbol( sym_logo, vec_logo, CENTER_X, CENTER_Y, SEGA_ANGLE(0), 0xC0 );
+      drawSymbol( sym_logo, vec_logo, MIN_X, CENTER_Y, SEGA_ANGLE(0), 0x40 );
       state = 2;
    }
 
@@ -375,11 +375,11 @@ static bool drawAttract( void ) {
          writeDebug('h',(uint16_t)x);
          heap_free( heap, x );
 
-         drawSymbol( sym_logo, vec_logo, CENTER_X, CENTER_Y, SEGA_ANGLE(0), 1 );
-         setResizeSpeed( SID(sym_logo), 1 );
+         drawSymbol( sym_logo, vec_logo, MAX_X, CENTER_Y, SEGA_ANGLE(0), 0x80 );
+         setTrajectory( SID(sym_logo), 4, SEGA_ANGLE(270) );
          const char s[] = "game over";
          vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-         drawString( sym_string1, vec_string1, CENTER_X-100, MIN_Y+40, 0x60, SEGA_COLOR_WHITE, s );
+         drawString( sym_string1, vec_string1, CENTER_X-100, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_WHITE, s );
          last_tick = system_tick;
          state++;
          break; }
@@ -403,7 +403,7 @@ static bool drawAttract( void ) {
             color = SEGA_COLOR_CYAN;
          }
          vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-         drawString( sym_string1, vec_string1, CENTER_X-120, MIN_Y+40, 0x60, color, s );
+         drawString( sym_string1, vec_string1, CENTER_X-120, GAME_TEXT_Y, GAME_TEXT_SIZE, color, s );
          last_tick = system_tick;
          state++;
          break; }
@@ -422,30 +422,30 @@ static bool drawAttract( void ) {
             case 0: {
                const char s[] = "lieutenant";
                vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );         
-               drawString( sym_string1, vec_string1, CENTER_X-220, CENTER_Y+100, 0xA0, SEGA_COLOR_MAGENTA, s );
+               drawString( sym_string1, vec_string1, CENTER_X-180, CENTER_Y+100, 0xA0, SEGA_COLOR_MAGENTA, s );
                break; }
             case 1: {
                const char s[] = "commander";
                vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );         
-               drawString( sym_string1, vec_string1, CENTER_X-200, CENTER_Y+100, 0xA0, SEGA_COLOR_MAGENTA, s );
+               drawString( sym_string1, vec_string1, CENTER_X-160, CENTER_Y+100, 0xA0, SEGA_COLOR_MAGENTA, s );
                break; }
             case 2: {
                const char s[] = "captain";
                vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );         
-               drawString( sym_string1, vec_string1, CENTER_X-150, CENTER_Y+100, 0xA0, SEGA_COLOR_MAGENTA, s );
+               drawString( sym_string1, vec_string1, CENTER_X-110, CENTER_Y+100, 0xA0, SEGA_COLOR_MAGENTA, s );
                break; }
          }
          char s[] = "abc 1234";
          memcpy( &s[0], high_name[2-state_ix], 3 );
          dec4( &s[4], high_score[2-state_ix] );
          vec_string2 = ALLOC( measureString(s) * sizeof(vector_t) );         
-         drawString( sym_string2, vec_string2, MAX_X, CENTER_Y-100, 0x80, SEGA_COLOR_CYAN, s );
+         drawString( sym_string2, vec_string2, MAX_X+80, CENTER_Y-100, 0x80, SEGA_COLOR_CYAN, s );
          setTrajectory( SID(sym_string2), 20, SEGA_ANGLE(270) );
          state++;
          break; }
 
       case 5:
-         if ( sym_string2->x < CENTER_X-150 ) {
+         if ( sym_string2->x < CENTER_X-110 ) {
             setStop( SID(sym_string2) );
             last_tick = system_tick;         
             state++;
@@ -587,7 +587,7 @@ void drawScore( uint16_t score, bool reset ) {
       char s[5] = {0,};
       sym_score->visible = false;
       dec4( s, score );
-      drawString( sym_score, vec_score, CENTER_X-40, MAX_Y-60, 0x60, SEGA_COLOR_WHITE, s );
+      drawString( sym_score, vec_score, SCORE_TEXT_X, SCORE_TEXT_Y, SCORE_TEXT_SIZE, SEGA_COLOR_WHITE, s );
    }
 }
 
@@ -607,7 +607,7 @@ uint8_t drawCountdown( uint8_t initValue, bool speak ) {
       if (value) value--;
       char s[3] = {0,};
       dec2( s, value );
-      drawString( sym_counter, vec_counter, CENTER_X-480, CENTER_Y+200, 0xF0, SEGA_COLOR_YELLOW, s );
+      drawString( sym_counter, vec_counter, CENTER_X-480, TIMER_TEXT_Y, TIMER_TEXT_SIZE, SEGA_COLOR_YELLOW, s );
       if ( speak ) {
          if ( value == 5 ) say( COUNT_5 );
          else if ( value == 4 ) say( COUNT_4 );
@@ -632,10 +632,13 @@ static void beginPlay(void) {
 
 static bool drawPlay(void) {
 
+   resetAnimate();
    shirtGame();
 
+   resetAnimate();
    ferengiGame();
 
+   resetAnimate();
    crystalGame();
 
    return true;
@@ -647,11 +650,11 @@ static void beginGameOver(void) {
    if ( score <= high_score[2] ) {
       const char s[] = "game over";
       vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-      drawString( sym_string1, vec_string1, CENTER_X-280, MIN_Y, 0xF0, SEGA_COLOR_RED, s );
+      drawString( sym_string1, vec_string1, CENTER_X-160, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_RED, s );
    }  else {
       const char s[] = "high score";
       vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-      drawString( sym_string1, vec_string1, CENTER_X-280, MIN_Y, 0xF0, SEGA_COLOR_YELLOW, s );
+      drawString( sym_string1, vec_string1, CENTER_X-160, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s );
    }
 
    setTrajectory( SID(sym_string1), 5, SEGA_ANGLE(0) );

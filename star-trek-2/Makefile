@@ -122,11 +122,14 @@ $(ART_BUILD_DIR)/logo.h: art/logo.svg
 $(ART_BUILD_DIR)/shirt%.h: art/shirt%.svg
 	../tools/svg2sega.py --scale 0.7 --rotate 90 --speed 0 --rdp 4.0 --close $< > $@
 
+$(ART_BUILD_DIR)/crystal%.h: art/crystal%.svg
+	../tools/svg2sega.py --scale 0.6 --rotate 90 --speed 0 --rdp 1.0 --close $< > $@
+
 $(ART_BUILD_DIR)/%.h: art/%.svg
 	../tools/svg2sega.py --scale 0.6 --rotate 90 --speed 0 --rdp 2.0 --close $< > $@
 
 $(ART_BUILD_DIR)/%.h: art/font/%.svg
-	../tools/svg2sega.py --scale 0.4 --rotate 90 --speed 0 --close $< > $@
+	../tools/svg2sega.py --scale 0.4 --rotate 90 --speed 0 --origin-top-left --close $< > $@
 
 # --- speech 
 
