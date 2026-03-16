@@ -33,6 +33,8 @@ parser.add_argument(      '--rdp', nargs='?', const=1.0, type=float, default=0.0
                     help='simplify with Ramer–Douglas–Peucker (10.0+ for agressive)')
 parser.add_argument(      '--speed', type=int, default=10, help='0=full, 1=slow 10=fast')
 parser.add_argument(      '--close', action='store_true', help='close window on complete')
+parser.add_argument(      '--origin-left', action='store_true',
+                    help='set origin to left-center of artwork (accounts for --rotate and --scale)')
 args = parser.parse_args()
 
 # Used to detect breaks between subpaths.
@@ -358,8 +360,8 @@ def two_opt(order, strokes, start_pt=(0.0, 0.0), max_passes=2):
 
     for _ in range(max_passes):
         improved = False
-        for i in range(1, n - 2):
-            for k in range(i + 1, n - 1):
+        for i in range(0, n - 1):
+            for k in range(i + 1, n):
                 cand = best[:]
                 cand[i:k + 1] = [(idx, not rev) for (idx, rev) in reversed(cand[i:k + 1])]
                 c = total_jump_cost(strokes, cand, start_pt)
@@ -562,11 +564,11 @@ for element in elements:
             "sega_color": sega_color,
         })
 
-# Compute center of artwork bounds
+# Compute origin of artwork bounds
 if minx == float("inf"):
     cx = cy = 0.0
 else:
-    cx = (minx + maxx) / 2.0
+    cx = minx if args.origin_left else (minx + maxx) / 2.0
     cy = (miny + maxy) / 2.0
 
 # PASS 2: center into final strokes
@@ -592,12 +594,28 @@ for st in strokes:
         pts = simplify_rdp(pts, eps=args.rdp)
     st["pts"] = pts
 
+
 # Optimize stroke order to reduce beam moves
 if args.no_opt or len(strokes) <= 1:
     order = [(i, False) for i in range(len(strokes))]
 else:
     order = order_strokes_greedy(strokes, start_pt=(0.0, 0.0))
-    order = two_opt(order, strokes, start_pt=(0.0, 0.0), max_passes=2)
+    order = two_opt(order, strokes, start_pt=(0.0, 0.0), max_passes=5)
+
+# PASS 4: apply order + stitch touching strokes to eliminate retraces
+def stitch_ordered_strokes(order, strokes, eps=1.0):
+    eps2 = eps * eps
+    result = []
+    for idx, rev in order:
+        st = strokes[idx]
+        pts = list(reversed(st["pts"])) if rev else list(st["pts"])
+        if result and dist2(result[-1]["pts"][-1], pts[0]) <= eps2:
+            result[-1]["pts"] = result[-1]["pts"] + pts[1:]
+        else:
+            result.append({"pts": pts, "rgb": st["rgb"], "sega_color": st["sega_color"]})
+    return result
+
+stitched = stitch_ordered_strokes(order, strokes, eps=args.merge)
 
 # Turtle setup
 wn = turtle.Screen()
@@ -613,12 +631,8 @@ skk.pendown()
 x3, y3 = 0.0, 0.0  # start at origin after centering
 
 # Draw + emit Sega vectors in optimized order
-for idx, rev in order:
-    st = strokes[idx]
+for st in stitched:
     pts = st["pts"]
-    if rev:
-        pts = list(reversed(pts))
-
     color = st["rgb"]
     sega_color = st["sega_color"]
 

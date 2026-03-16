@@ -116,8 +116,14 @@ mame: roms
 
 art: prereq $(HDRS)
 
+$(ART_BUILD_DIR)/logo.h: art/logo.svg
+	../tools/svg2sega.py --scale 2.0 --rotate 90 --speed 0 --origin-left --merge 1.0 --rdp 0 --no-opt --close $< > $@
+
+$(ART_BUILD_DIR)/shirt%.h: art/shirt%.svg
+	../tools/svg2sega.py --scale 0.7 --rotate 90 --speed 0 --rdp 4.0 --close $< > $@
+
 $(ART_BUILD_DIR)/%.h: art/%.svg
-	../tools/svg2sega.py --scale 0.6 --rotate 90 --speed 0 --merge 0 --rdp 1.0 --close $< > $@
+	../tools/svg2sega.py --scale 0.6 --rotate 90 --speed 0 --rdp 2.0 --close $< > $@
 
 $(ART_BUILD_DIR)/%.h: art/font/%.svg
 	../tools/svg2sega.py --scale 0.4 --rotate 90 --speed 0 --close $< > $@
@@ -139,4 +145,4 @@ PROGRAMMER = python3 ~/Downloads/EPROM_EMU_NG_2.0rc9.py
 UART = /dev/cu.usbserial-B00050RO
 
 flash:
-	 ${PROGRAMMER} -mem 27256 -spi y -auto y -start 0 build/gamerom.bin ${UART}
+	 ${PROGRAMMER} -mem 27512 -spi y -auto y -start 0 build/gamerom.bin ${UART}
