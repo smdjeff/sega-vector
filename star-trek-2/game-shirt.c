@@ -42,7 +42,7 @@ void shirtGame( void ) {
 
    const char s1[] = "red shirt always dies";
    vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
-   drawString( sym_string1, vec_string1, CENTER_X-460, MIN_Y+40, 0x80, SEGA_COLOR_YELLOW, s1 );
+   drawString( sym_string1, vec_string1, GAME_TEXT_X, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s1 );
    delay(3000);
    sym_string1->visible = false;
    FREE( vec_string1 );
@@ -128,8 +128,9 @@ void shirtGame( void ) {
                SOUND_COMMAND = STARBASE_RED;
             } else {
                SOUND_COMMAND = DOCK;
+               delay( SECONDS(0.33) ); // extra penalty for missing
             }
-            waitAnimate( SECONDS(0.75) );
+            waitAnimate( SECONDS(0.25) );
             setStop( SID(sym_shirt1) );
             setStop( SID(sym_shirt2) );
             setStop( SID(sym_shirt3) );

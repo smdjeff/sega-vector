@@ -6,6 +6,10 @@ const uint8_t vector_ring[] = {
     #include "art/ring.h"
 };
 
+const uint8_t vector_circle[] = {
+    #include "art/circle.h"
+};
+
 const uint8_t vector_laser[] = {
     #include "art/laser.h"
 };
@@ -33,13 +37,17 @@ extern symbol_t* sym_crystal1;
 extern symbol_t* sym_crystal2;
 extern symbol_t* sym_crystal3;
 
-extern symbol_t* sym_hand1;
+#define sym_ghost    sym_latinum1
+#define sym_circle1  sym_latinum2
+#define sym_circle2  sym_latinum3
+#define sym_ring     sym_shirt1
+#define sym_laser    sym_shirt2
+
 extern symbol_t* sym_latinum1;
 extern symbol_t* sym_latinum2;
 extern symbol_t* sym_latinum3;
 extern symbol_t* sym_shirt1;
 extern symbol_t* sym_shirt2;
-extern symbol_t* sym_shirt3;
 
 // Target slot positions inside the jar housing
 static const int16_t CRYSTAL_SLOT_X[3] = { CENTER_X-100, CENTER_X, CENTER_X+100 };
@@ -117,6 +125,9 @@ void crystalGame( void ) {
    vector_t* vec_ring_art = ALLOC( sizeof(vector_ring) );
    memcpy( vec_ring_art, vector_ring, sizeof(vector_ring) );
 
+   vector_t* vec_circle_art = ALLOC( sizeof(vector_circle) );
+   memcpy( vec_circle_art, vector_circle, sizeof(vector_circle) );
+
    vector_t* vec_laser_art = ALLOC( sizeof(vector_laser) );
    memcpy( vec_laser_art, vector_laser, sizeof(vector_laser) );
 
@@ -132,7 +143,7 @@ void crystalGame( void ) {
 
    const char s1[] = "stabilize dilithium crystal";
    vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
-   drawString( sym_string1, vec_string1, CENTER_X-460, MIN_Y+40, 0x80, SEGA_COLOR_YELLOW, s1 );
+   drawString( sym_string1, vec_string1, GAME_TEXT_X, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s1 );
    delay(3000);
    sym_string1->visible = false;
    FREE( vec_string1 );
@@ -143,8 +154,8 @@ void crystalGame( void ) {
    // === Pop crystals out with setTrajectory — they fly outward and stop ===
    SOUND_COMMAND = NOMAD_MOTION;
    for ( uint8_t i = 0; i < 3; i++ ) {
-      setTrajectory( SID(crystal_sym[i]), 8, rand16() & 0x03ff  );
-      setRotationSpeed( SID(crystal_sym[i]), 6 + (rand8()&7) );
+      setTrajectory( SID(crystal_sym[i]), 10, rand16() & 0x03ff  );
+      setRotationSpeed( SID(crystal_sym[i]), 33 );
    }
    waitAnimate( SECONDS(0.5) );
    for ( uint8_t i = 0; i < 3; i++ ) {
@@ -163,17 +174,19 @@ void crystalGame( void ) {
       // --- Show ghost crystal at target slot ---
       memcpy( vec_ghost, vec_c[ci], crystal_bytes[ci] );
       colorize( vec_ghost, crystal_nvecs[ci], SEGA_COLOR_GRAY );
-      initSymbol( sym_latinum1, vec_ghost );
-      drawSymbol( sym_latinum1, vec_ghost,
+      initSymbol( sym_ghost, vec_ghost );
+      drawSymbol( sym_ghost, vec_ghost,
                   CRYSTAL_SLOT_X[ci], CRYSTAL_SLOT_Y[ci],
                   CRYSTAL_SLOT_ROT[ci], 0x60 );
 
       // --- Ring: always visible, rotates with spinner ---
-      drawSymbol( sym_shirt1, vec_ring_art, CENTER_X, CENTER_Y, 0, 0xE0 );
+      drawSymbol( sym_ring, vec_ring_art, CENTER_X, CENTER_Y, 0, 0xC0 );
+      drawSymbol( sym_circle1, vec_circle_art, CENTER_X, CENTER_Y, 0, 0xB8 );
+      drawSymbol( sym_circle2, vec_circle_art, CENTER_X, CENTER_Y, 0, 0xC0 );
 
       // --- Laser: hidden until fire is pressed ---
-      drawSymbol( sym_shirt2, vec_laser_art, CENTER_X, CENTER_Y, 0, 0xE0 );
-      sym_shirt2->visible = false;
+      drawSymbol( sym_laser, vec_laser_art, CENTER_X, CENTER_Y, 0, 0xE0 );
+      sym_laser->visible = false;
 
       // --- Active crystal color ---
       colorize( vec_c[ci], crystal_nvecs[ci], SEGA_COLOR_MAGENTA );
@@ -198,13 +211,13 @@ void crystalGame( void ) {
          uint16_t ring_angle = spinner_vector_angle( false );
 
          // Spinner → ring and laser rotation
-         sym_shirt1->rotation = ring_angle;
-         sym_shirt2->rotation = ring_angle;
+         sym_ring->rotation = ring_angle;
+         sym_laser->rotation = ring_angle;
 
          // --- Laser flash: show for a few frames after fire ---
          if ( laser_flash ) {
             laser_flash--;
-            sym_shirt2->visible = (laser_flash > 0);
+            sym_laser->visible = (laser_flash > 0);
          }
 
          // --- Fire button: push crystal and flash laser ---
@@ -216,7 +229,7 @@ void crystalGame( void ) {
             fire_count++;
             ringPush( ring_angle, &cx, &cy );
             if ( fire_count == 1 ) {
-               sym_shirt2->visible = true;
+               sym_laser->visible = true;
                laser_flash = 6;
                SOUND_COMMAND = PHASER;
             }
@@ -273,7 +286,8 @@ void crystalGame( void ) {
             score += 2 + (ci << 1);
             SOUND_COMMAND = DOCK;
 
-            sym_latinum1->visible = false;
+            sym_ghost->visible = false;
+            sym_laser->visible = false;
 
             // Snap crystal to slot
             crystal_sym[ci]->x        = CRYSTAL_SLOT_X[ci];
@@ -291,9 +305,11 @@ void crystalGame( void ) {
       } // end while for this crystal
 
       // --- Per-crystal cleanup ---
-      sym_shirt1->visible   = false;
-      sym_shirt2->visible   = false;
-      sym_latinum1->visible = false;
+      sym_ring->visible   = false;
+      sym_circle1->visible = false;
+      sym_circle2->visible = false;
+      sym_laser->visible   = false;
+      sym_ghost->visible = false;
 
       if ( !locked ) {
          crystal_sym[ci]->visible = false;
@@ -312,7 +328,7 @@ void crystalGame( void ) {
       {
          const char s[] = "matrix stable";
          vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-         drawString( sym_string1, vec_string1, CENTER_X-250, MIN_Y+40, 0x90, SEGA_COLOR_GREEN, s );
+         drawString( sym_string1, vec_string1, CENTER_X-200, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_GREEN, s );
       }
       waitAnimate( SECONDS(3) );
 
@@ -324,7 +340,7 @@ void crystalGame( void ) {
       {
          const char s[] = "core breach";
          vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-         drawString( sym_string1, vec_string1, CENTER_X-240, MIN_Y+40, 0x90, SEGA_COLOR_RED, s );
+         drawString( sym_string1, vec_string1, CENTER_X-200, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_RED, s );
       }
       setRotationSpeed( SID(sym_jar), 60 );
       setResizeSpeed( SID(sym_jar), -8 );
@@ -339,9 +355,9 @@ void crystalGame( void ) {
    sym_crystal1->visible = false;
    sym_crystal2->visible = false;
    sym_crystal3->visible = false;
-   sym_shirt1->visible   = false;
-   sym_shirt2->visible   = false;
-   sym_latinum1->visible = false;
+   sym_ring->visible   = false;
+   sym_laser->visible   = false;
+   sym_ghost->visible = false;
    FREE( vec_jar );
    FREE( vec_c[0] );
    FREE( vec_c[1] );

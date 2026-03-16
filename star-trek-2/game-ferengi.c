@@ -52,11 +52,13 @@ extern symbol_t* sym_latinum1;
 extern symbol_t* sym_latinum2;
 extern symbol_t* sym_latinum3;
 
+#define HEAD_X (CENTER_X)
+#define HEAD_Y (CENTER_Y-50)
 
 typedef enum {
-   HAPPY = 1, // sounds 1 ah, 3 yes
-   ANGRY = 2, // no sound
-   OHYES = 3  // sound 2 oomox
+   HAPPY = 1,
+   ANGRY = 2,
+   ECSTATIC = 3
 } expression_t;
 
 static void drawExpression(vector_t* vec, expression_t ix) {
@@ -74,7 +76,7 @@ static void drawExpression(vector_t* vec, expression_t ix) {
          memcpy( vec, vector_expression2, sizeof(vector_expression2) );
          sym_expression->visible = true; 
          break;
-      case OHYES:
+      case ECSTATIC:
          sym_expression->visible = false;
          memcpy( vec, vector_expression3, sizeof(vector_expression3) );
          sym_expression->visible = true; 
@@ -110,10 +112,10 @@ static void drawHand(uint16_t vec_angle, uint8_t tickle) {
    sym_hand1->visible = (dx > 0);
    sym_hand2->visible = (dx < 0);
 
-   sym_hand1->x = CENTER_X - 0 + dx;
-   sym_hand1->y = CENTER_Y + 50 - dy;
-   sym_hand2->x = CENTER_X + 0 + dx;
-   sym_hand2->y = CENTER_Y + 70 - dy;
+   sym_hand1->x = HEAD_X - 0 + dx;
+   sym_hand1->y = HEAD_Y + 50 - dy;
+   sym_hand2->x = HEAD_X + 0 + dx;
+   sym_hand2->y = HEAD_Y + 70 - dy;
 
    sym_hand1->rotation = (SEGA_ANGLE(0) + (dy >> 0)) & 0x03FF;
    sym_hand2->rotation = (SEGA_ANGLE(0) - (dy >> 0)) & 0x03FF;
@@ -144,32 +146,32 @@ void ferengiGame( void ) {
 
    vector_t* vec_head = ALLOC( sizeof(vector_head) );
    memcpy( vec_head, vector_head, sizeof(vector_head) );
-   drawSymbol( sym_head, vec_head, CENTER_X, CENTER_Y+100, SEGA_ANGLE(0), 0x80 );
+   drawSymbol( sym_head, vec_head, HEAD_X, HEAD_Y+100, SEGA_ANGLE(0), 0x80 );
 
    vector_t* vec_ear1 = ALLOC( sizeof(vector_ear1) );
    memcpy( vec_ear1, vector_ear1, sizeof(vector_ear1) );
-   drawSymbol( sym_ear1, vec_ear1, CENTER_X+188, CENTER_Y+78, SEGA_ANGLE(0), 0x80 );
+   drawSymbol( sym_ear1, vec_ear1, HEAD_X+188, HEAD_Y+78, SEGA_ANGLE(0), 0x80 );
 
    vector_t* vec_ear2 = ALLOC( sizeof(vector_ear2) );
    memcpy( vec_ear2, vector_ear2, sizeof(vector_ear2) );
-   drawSymbol( sym_ear2, vec_ear2, CENTER_X-174, CENTER_Y+111, SEGA_ANGLE(0), 0x80 );
+   drawSymbol( sym_ear2, vec_ear2, HEAD_X-174, HEAD_Y+111, SEGA_ANGLE(0), 0x80 );
 
    vector_t* vec_shirt = ALLOC( sizeof(vector_shirt) );
    memcpy( vec_shirt, vector_shirt, sizeof(vector_shirt) );
-   drawSymbol( sym_shirt, vec_shirt, CENTER_X+10, CENTER_Y-160, SEGA_ANGLE(0), 0x80 );
+   drawSymbol( sym_shirt, vec_shirt, HEAD_X+10, HEAD_Y-160, SEGA_ANGLE(0), 0x80 );
 
    vector_t* vec_expression = ALLOC( MAX(MAX(sizeof(vector_expression1),sizeof(vector_expression2)),sizeof(vector_expression3)) );
    memcpy( vec_expression, vector_expression2, sizeof(vector_expression2) );
-   drawSymbol( sym_expression, vec_expression, CENTER_X+20, CENTER_Y+70, SEGA_ANGLE(0), 0x80 );
+   drawSymbol( sym_expression, vec_expression, HEAD_X+20, HEAD_Y+70, SEGA_ANGLE(0), 0x80 );
 
    const char s1[] = "rub the lobes";
    const char s2[] = "oomox for latinum bars";
    vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
    vec_string2 = ALLOC( measureString(s2) * sizeof(vector_t) );
-   drawString( sym_string1, vec_string1, CENTER_X-200, MIN_Y+40, 0x80, SEGA_COLOR_YELLOW, s1 );
+   drawString( sym_string1, vec_string1, GAME_TEXT_X, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s1 );
    delay(3000);
    sym_string1->visible = false;
-   drawString( sym_string2, vec_string2, CENTER_X-360, MIN_Y+40, 0x80, SEGA_COLOR_YELLOW, s2 );
+   drawString( sym_string2, vec_string2, GAME_TEXT_X, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s2 );
    delay(3000);
    sym_string2->visible = false;
    FREE( vec_string1 );
