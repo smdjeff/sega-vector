@@ -1,6 +1,7 @@
 .DS_Store
 *.lis
 .idea/
+.claude/
 main.ini
 **/dump/
 **/cfg/

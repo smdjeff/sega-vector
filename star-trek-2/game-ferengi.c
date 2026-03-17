@@ -56,9 +56,9 @@ extern symbol_t* sym_latinum3;
 #define HEAD_Y (CENTER_Y-50)
 
 typedef enum {
-   HAPPY = 1,
-   ANGRY = 2,
-   ECSTATIC = 3
+   ANGRY    = 0,
+   HAPPY    = 1,
+   ECSTATIC = 2
 } expression_t;
 
 static void drawExpression(vector_t* vec, expression_t ix) {
@@ -66,22 +66,21 @@ static void drawExpression(vector_t* vec, expression_t ix) {
    if (ix != last_expression) {
       switch (ix) {
       case HAPPY:
-         if ( rand8() & 0x01 ) say(FERENGI_AH); else say(FERENGI_YES);
          sym_expression->visible = false;
          memcpy( vec, vector_expression1, sizeof(vector_expression1) );
-         sym_expression->visible = true; 
+         sym_expression->visible = true;
          break;
       case ANGRY:
          sym_expression->visible = false;
          memcpy( vec, vector_expression2, sizeof(vector_expression2) );
-         sym_expression->visible = true; 
+         sym_expression->visible = true;
          break;
       case ECSTATIC:
          sym_expression->visible = false;
          memcpy( vec, vector_expression3, sizeof(vector_expression3) );
-         sym_expression->visible = true; 
+         sym_expression->visible = true;
          break;
-      default: 
+      default:
          sym_expression->visible = false;
          break;
       }
@@ -103,7 +102,7 @@ static void drawSparkle(uint16_t x, uint16_t y, uint16_t angle) {
    }
 }
 
-static void drawHand(uint16_t vec_angle, uint8_t tickle, uint8_t sparkle_count) {
+static void drawHand(uint16_t vec_angle, uint8_t ear, uint8_t sparkle_count) {
    int16_t dx, dy, finger_x;
    vectorToXY(vec_angle, 240, &dx, &dy);
 
@@ -126,7 +125,7 @@ static void drawHand(uint16_t vec_angle, uint8_t tickle, uint8_t sparkle_count) 
       finger_x = -((0x3FF - sym_hand2->rotation) >> 2); 
    }
 
-   if ( tickle == 1 ) {
+   if ( ear == 2 ) {
       // left ear
       uint16_t x = (int16_t)sym_hand1->x - finger_x;
       uint16_t y = sym_hand1->y + 50;
@@ -134,7 +133,7 @@ static void drawHand(uint16_t vec_angle, uint8_t tickle, uint8_t sparkle_count) 
          drawSparkle( x, y, SEGA_ANGLE(225)+rand8() );
    }
 
-   if ( tickle == 2 ) {
+   if ( ear == 1 ) {
       // right ear
       uint16_t x = (int16_t)sym_hand2->x + 10 + finger_x;
       uint16_t y = sym_hand2->y + 50;
@@ -143,6 +142,22 @@ static void drawHand(uint16_t vec_angle, uint8_t tickle, uint8_t sparkle_count) 
    }
 }
 
+
+static void debugValue( uint16_t value ) {
+   static uint16_t last_value = 0;
+   static vector_t* vec   = NULL;
+   if ( !vec ) {
+      const char s[] = "8888";
+      vec = ALLOC( measureString(s) * sizeof(vector_t) );
+   }
+   if ( value != last_value ) {
+      last_value = value;
+      char s[5] = {0,};
+      sym_string3->visible = false;
+      dec4( s, value );
+      drawString( sym_string3, vec, CENTER_X, MIN_Y+40, 0x60, 0, s );
+   }
+}
 
 void ferengiGame( void ) {
 
@@ -197,85 +212,90 @@ void ferengiGame( void ) {
    symbol_t* lat_symbols[] = {sym_latinum1, sym_latinum2, sym_latinum3};
 
    spinner_vector_angle( true );
-   drawCountdown(20,false);
+   drawCountdown(60,false);
 
-   uint16_t ear_tick        = system_tick - SECONDS(3);
+   uint16_t ear_tick        = system_tick - ((uint16_t)60 * 60 >> 4);  // first pick after SECONDS(1)
    uint16_t face_tick       = 0;
    uint16_t decay_tick      = 0;
    uint16_t friction        = 0;
    expression_t expr_tier   = ANGRY;
-   bool active_right_ear    = false;
-   uint16_t tickle_angle    = 0;
-   uint8_t tickle           = 0;
+   uint8_t active_ear       = 0;  // 0=none, 1=left, 2=right
 
-#define FRICTION_MED    5
-#define FRICTION_HIGH  12
+   bool oomox               = false;
+
+#define FRICTION_MED      10   // angry -> happy
+#define FRICTION_MED_LOW   7   // happy -> angry
+#define FRICTION_HIGH     60   // happy -> ecstatic
+#define FRICTION_HIGH_MED 50   // ecstatic -> happy
+#define FRICTION_MAX      65   // cap to keep decay time reasonable
+#define SPINNER_DELTA      4
 
    drawExpression( vec_expression, ANGRY );
 
-   while ( drawCountdown(0,false) ) {
+   uint8_t cdown;
+   while ( (cdown = drawCountdown(0,false)) ) {
 
       waitAnimate(0);
       drawScore( score, false );
+      debugValue( friction );
 
-      if ( system_tick - ear_tick > SECONDS(5) ) {
+      uint16_t ear_interval = SECONDS(1) + ((uint16_t)cdown * cdown >> 4);
+      if ( system_tick - ear_tick > ear_interval ) {
          ear_tick = system_tick;
+         friction = 0;
 
-         active_right_ear = rand8() & 0x01;
-         if ( active_right_ear ) {
-            colorize( vec_ear1, sizeof(vector_ear1)/sizeof(vector_t), SEGA_COLOR_MAGENTA );
-            colorize( vec_ear2, sizeof(vector_ear2)/sizeof(vector_t), SEGA_COLOR_ORANGE );
-         } else {
-            colorize( vec_ear1, sizeof(vector_ear1)/sizeof(vector_t), SEGA_COLOR_ORANGE );
-            colorize( vec_ear2, sizeof(vector_ear2)/sizeof(vector_t), SEGA_COLOR_MAGENTA );
-         }
+         active_ear = (rand8() & 0x01) ? 2 : 1;
+         colorize( vec_ear1, sizeof(vector_ear1)/sizeof(vector_t), active_ear == 1 ? SEGA_COLOR_MAGENTA : SEGA_COLOR_ORANGE );
+         colorize( vec_ear2, sizeof(vector_ear2)/sizeof(vector_t), active_ear == 2 ? SEGA_COLOR_MAGENTA : SEGA_COLOR_ORANGE );
+      }
+
+      // friction decay and face update always run, even when spinner is stationary
+      if ( friction > 0 && system_tick - decay_tick >= SECONDS(0.025) ) {
+         decay_tick = system_tick;
+         friction--;
+      }
+
+      // Determine tier from friction with hysteresis
+      expression_t new_tier = expr_tier;
+      switch (expr_tier) {
+         case ANGRY:    if (friction >= FRICTION_MED)      new_tier = HAPPY;     break;
+         case HAPPY:    if (friction >= FRICTION_HIGH)     new_tier = ECSTATIC;
+                   else if (friction <  FRICTION_MED_LOW)  new_tier = ANGRY;     break;
+         case ECSTATIC: if (friction <  FRICTION_HIGH_MED) new_tier = HAPPY;  oomox=true;   break;
+      }
+
+      // Rate-limit face changes to every 1 second
+      if ( new_tier != expr_tier && system_tick - face_tick > SECONDS(1) ) {
+         expr_tier = new_tier;
+         face_tick = system_tick;
+         if ( new_tier > expr_tier ) { if ( rand8() & 0x01 ) say(FERENGI_AH); else say(FERENGI_YES); }
+         drawExpression( vec_expression, expr_tier );
       }
 
       uint16_t angle = spinner_vector_angle( false );
       static uint16_t l_angle = 0xffff;
-      if (angle == l_angle) continue;
+      int16_t delta = (int16_t)(angle - l_angle);
+      if (delta < 0) delta = -delta;
+      bool moving = (delta >= SPINNER_DELTA);
       l_angle = angle;
 
       bool in_right_ear = (angle > SEGA_ANGLE(49) && angle < SEGA_ANGLE(102));
       bool in_left_ear  = (angle > SEGA_ANGLE(260) && angle < SEGA_ANGLE(317));
 
-      tickle = 0;
-      if (angle > tickle_angle + SEGA_ANGLE(15) ||
-          angle < tickle_angle - SEGA_ANGLE(15) ) {
-         tickle_angle = angle;
-         if (in_left_ear && !active_right_ear) tickle = 1;
-         if (in_right_ear && active_right_ear) tickle = 2;
+      bool in_active_ear = (active_ear == 1 && in_right_ear) || (active_ear == 2 && in_left_ear);
+      uint8_t ear = (moving && in_active_ear) ? active_ear : 0;
+
+      if ( ear ) {
+         if ( friction < FRICTION_MAX ) friction++;
       }
 
-      if ( tickle ) {
-         if ( friction < 0xFFFF ) friction++;
-         decay_tick = system_tick;
-      } else if ( friction > 0 && system_tick - decay_tick > SECONDS(0.5) ) {
-         decay_tick = system_tick;
-         friction--;
-      }
+      static uint8_t sparkle_counter = 0;
+      if (ear) sparkle_counter++;
+      uint8_t sparkle_count = (expr_tier == ECSTATIC && !(sparkle_counter & 1)) ? 1 :
+                              (expr_tier == HAPPY    && !(sparkle_counter & 7)) ? 1 : 0;
+      drawHand( angle, ear, sparkle_count );
 
-      // Determine tier from friction
-      expression_t new_tier;
-      if      ( friction >= FRICTION_HIGH ) new_tier = ECSTATIC;
-      else if ( friction >= FRICTION_MED  ) new_tier = HAPPY;
-      else                                  new_tier = ANGRY;
-
-      // Rate-limit face changes to every 2 seconds
-      if ( new_tier != expr_tier && system_tick - face_tick > SECONDS(1) ) {
-         expr_tier = new_tier;
-         face_tick = system_tick;
-         drawExpression( vec_expression, expr_tier );
-      }
-
-      uint8_t sparkle_count = (expr_tier == ECSTATIC) ? 3 :
-                              (expr_tier == HAPPY)    ? 1 : 0;
-      drawHand( angle, tickle, sparkle_count );
-
-      if ( tickle ) {
-         if      ( expr_tier == ECSTATIC ) score += 3;
-         else if ( expr_tier == HAPPY    ) score += 1;
-      }
+      if ( ear ) score += sparkle_count;
 
    }
 
@@ -290,8 +310,10 @@ void ferengiGame( void ) {
 
    drawExpression( vec_expression, HAPPY );
    delay(1000);
-   say(FERENGI_OOMOX);
-   delay(6000);
+   if (oomox) {
+      say(FERENGI_OOMOX);
+      delay(6000);
+   }
 
    sym_head->visible = false;
    sym_ear1->visible = false;

@@ -418,7 +418,7 @@ static bool drawAttract( void ) {
             color = SEGA_COLOR_CYAN;
          }
          vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-         drawString( sym_string1, vec_string1, CENTER_X-120, GAME_TEXT_Y, GAME_TEXT_SIZE, color, s );
+         drawString( sym_string1, vec_string1, CENTER_X-130, GAME_TEXT_Y, GAME_TEXT_SIZE, color, s );
          state++;
          break; }
       

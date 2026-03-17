@@ -141,7 +141,7 @@ void crystalGame( void ) {
                   CRYSTAL_SLOT_ROT[i], 0x60 );
    }
 
-   const char s1[] = "stabilize dilithium crystal";
+   const char s1[] = "laser crystals to center";
    vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
    drawString( sym_string1, vec_string1, GAME_TEXT_X, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s1 );
    delay(3000);
@@ -343,7 +343,7 @@ void crystalGame( void ) {
          drawString( sym_string1, vec_string1, CENTER_X-200, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_RED, s );
       }
       setRotationSpeed( SID(sym_jar), 60 );
-      setResizeSpeed( SID(sym_jar), -8 );
+      setResizeSpeed( SID(sym_jar), 16 );
       waitAnimate( SECONDS(2) );
       setStop( SID(sym_jar) );
       sym_string1->visible = false;

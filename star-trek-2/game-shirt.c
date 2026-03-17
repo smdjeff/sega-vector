@@ -116,14 +116,31 @@ void shirtGame( void ) {
 
       symbol_t *sym_red_shirt = sym_shirt3;
 
+      // timeout gets shorter as master countdown runs out
+      uint8_t  cdown        = drawCountdown(0, false);
+      uint16_t shirt_timeout = (SECONDS(1) >> 1) + ((uint16_t)cdown * cdown >> 1);
+      uint16_t shirt_tick      = system_tick;
+      uint16_t score_interval  = (shirt_timeout >> 3) - (shirt_timeout >> 6);  // ≈ shirt_timeout/9
+      uint16_t next_decrement  = shirt_tick + score_interval;
+      uint8_t  hit_score       = 10;
+      uint8_t  diff_bonus      = (20 - cdown) >> 1;  // 0 at easy, 10 at hardest
+
       do {
+         if (system_tick - shirt_tick > shirt_timeout) break; // reshuffle
+
+         if (hit_score > 1 && system_tick >= next_decrement) {
+            hit_score--;
+            next_decrement += score_interval;
+         }
+
          uint8_t buttons = PORT_374;
          if (buttons & BUTTON_FIRE) {
             if ( checkColission(sym_box, sym_shirt1) ) { setRotationSpeed( SID(sym_shirt1), 66); setResizeSpeed( SID(sym_shirt1), -15 ); }
             else if ( checkColission(sym_box, sym_shirt2) ) { setRotationSpeed( SID(sym_shirt2), 66); setResizeSpeed( SID(sym_shirt2), -15 ); }
             else if ( checkColission(sym_box, sym_shirt3) ) { setRotationSpeed( SID(sym_shirt3), 66); setResizeSpeed( SID(sym_shirt3), -15 ); }
             if ( checkColission(sym_box, sym_red_shirt) ) {
-               score++;
+               uint8_t bonus = (system_tick - shirt_tick < (shirt_timeout >> 1)) ? diff_bonus : 0;
+               score += hit_score + bonus;
                drawScore(score,false);
                SOUND_COMMAND = STARBASE_RED;
             } else {

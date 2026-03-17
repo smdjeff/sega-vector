@@ -451,7 +451,7 @@ void beginDiagnosticsGrid( void );
       do { \
         writeDebug('!',x); \
         uint8_t *halt = (uint8_t*)(0x0000); \
-        *halt = x; \
+        *halt = 0; \
       } while(0)
 
 #else 

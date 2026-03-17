@@ -61,7 +61,7 @@ clean:
 
 # --- Compilation Targets
 
-build/gamerom.bin: build/bootrom.bin $(HDRS) | prereq
+build/gamerom.bin: build/bootrom.bin $(SOURCE) sega.h $(HDRS) | prereq
 	@echo "building 48k rom 0x0800-0xBFFF, sega-boot-rom in cpu rom socket"
 	zcc +z80 --list -m -vn -SO3 -compiler=sdcc -startup=1 $(SOURCE) -o gamerom -create-app $(CFLAGS) -Cz"--rombase=0x0800 --romsize=47104"
 	@mv gamerom* build/ 2>/dev/null || true
