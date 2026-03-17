@@ -693,16 +693,10 @@ static void beginGameOver(void) {
       drawString( sym_string1, vec_string1, CENTER_X-160, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s );
    }
 
-   setTrajectory( SID(sym_string1), 5, SEGA_ANGLE(0) );
 }
 
 static bool drawGameOver(void) {
-   // wait for text to slide into place
-   if ( sym_string1->y > MAX_Y - 200 ) {
-      setStop( SID(sym_string1) );
-      return true;
-   }
-   return false;
+   return true;
 }
 
 static void endGameOver(void) {
