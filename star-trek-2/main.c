@@ -240,25 +240,41 @@ void initSymbols(void) {
    // blank screen shouldn't be nil, otherwise you get a dot on screen
    sym_last       = &symbols[symbols_count++];
 
-   symbol_t* const end = symbols + symbols_count;
-   for (symbol_t* sym = symbols; sym < end; sym++) {
-      initSymbol(sym, vec_blank);
-   }
-
-   sym_last->last = true;
-   sym_last->visible = true;
-
    heap = (uint8_t*)&symbols[symbols_count];
    uint16_t used = (uint16_t)heap - VECTOR_RAM;
    heap_init( heap, VECTOR_RAM_SZ - used );
 
    initVectors();
 
+   symbol_t* const end = symbols + symbols_count;
+   for (symbol_t* sym = symbols; sym < end; sym++) {
+      initSymbol(sym, vec_blank); // depends on initVectors
+   }
+
+   sym_last->last = true;
+   sym_last->visible = true;
+
    writeDebug('s', symbols);
    writeDebug('h', heap);
    writeDebug('v', vectors);
 }
 
+static void dumpSymbols(void) {
+   symbol_t* const end = symbols + symbols_count;
+   for (symbol_t* sym = symbols; sym < end; sym++) {
+      if ( sym->visible ) {
+         writeDebug('@', sym);
+         writeDebug(' ', sym->flags);
+         writeDebug(' ', sym->x);
+         writeDebug(' ', sym->y);
+         writeDebug(' ', sym->vector_addr);
+         writeDebug(' ', sym->rotation);
+         writeDebug(' ', sym->scale);
+         if (sym->vector_addr < 0xE000) kill(__LINE__);
+         if (sym->vector_addr >= 0xF000) kill(__LINE__);
+      }
+   }
+}
 
 uint16_t spinner_vector_angle( bool reset ) {
    PORT_370 = SELECT_SPINNER;
