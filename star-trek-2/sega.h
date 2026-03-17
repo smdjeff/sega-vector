@@ -237,6 +237,8 @@ typedef struct {
 #define MIN_Y (1024-400) // 624
 #define MAX_Y (1024+400) // 1424
 
+//// game specific
+
 #define GAME_TEXT_X     (MIN_X)
 #define GAME_TEXT_Y     (MIN_Y+70)
 #define GAME_TEXT_SIZE  0x80
@@ -249,8 +251,7 @@ typedef struct {
 #define HITBOX_SZ       60
 #define MAX_SYMBOLS     32
 
-// sounds
-#define COIN_DROP    0x24
+#define COIN_DROP       0x24
 
 
 typedef enum {

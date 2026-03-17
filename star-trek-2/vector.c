@@ -18,31 +18,14 @@ void initSymbol( symbol_t *const sym, vector_t *const vec ) {
    sym->scale = 0x80; // 1x
 }
 
-#if 1
 void drawSymbol( symbol_t *const sym, vector_t *const vec, uint16_t x, uint16_t y, uint16_t sega_angle, uint8_t scale ) {
-   sym->visible = true;
    sym->x = x;
    sym->y = y;
    sym->vector_addr = (uint16_t)vec;
    sym->rotation = sega_angle;
    sym->scale = scale;
+   sym->visible = true;
 }
-#else
-// z80 speed optimized
-void drawSymbol(symbol_t *const sym, vector_t *const vec, uint16_t x, uint16_t y, uint16_t angle, uint8_t scale) {
-    register uint8_t *p = (uint8_t *)sym;
-    *p++ = 0x01;  // visible=1
-    *p++ = (uint8_t)x;
-    *p++ = (uint8_t)(x >> 8);
-    *p++ = (uint8_t)y;
-    *p++ = (uint8_t)(y >> 8);
-    *p++ = (uint8_t)vec;
-    *p++ = (uint8_t)((uint16_t)vec >> 8);
-    *p++ = (uint8_t)angle;
-    *p++ = (uint8_t)(angle >> 8);
-    *p = scale;
-}
-#endif
 
 void resetSymbol( symbol_t *const sym, uint16_t x, uint16_t y, uint16_t sega_angle, uint8_t scale ) {
    sym->x = x;
@@ -104,15 +87,9 @@ void animate(uint16_t system_tick, symbol_t* symbols, uint8_t symbol_count) {
          }
          if ( m->x_speed ) {
             sym->x += m->x_speed;
-            if ((m->x_speed > 0 && sym->x > MAX_X) || (m->x_speed < 0 && sym->x < MIN_X)) {
-               sym->visible = false;
-            }
          }
          if ( m->y_speed ) {
             sym->y += m->y_speed;
-            if ((m->y_speed > 0 && sym->y > MAX_Y) || (m->y_speed < 0 && sym->y < MIN_Y)) {
-               sym->visible = false;
-            }
          }
       }
    }

@@ -141,7 +141,8 @@ vector_t* vec_line    = NULL;
 vector_t* vec_box     = NULL;
 vector_t* vec_score   = NULL;
 vector_t* vec_counter = NULL;
-vector_t* vec_logo    = NULL;
+vector_t* vec_logo1   = NULL;
+vector_t* vec_logo2   = NULL;
 vector_t* vec_string1 = NULL;
 vector_t* vec_string2 = NULL;
 vector_t* vec_string3 = NULL;
@@ -154,7 +155,7 @@ void initVectors(void) {
       heap_free( heap, vectors );
    }
    vectors = heap_alloc( heap, sizeof(vector_t)*(1+1+5) );
-   if ( !vectors ) kill( 0x01 );
+   if ( !vectors ) kill( __LINE__ );
 
    vector_t* vec = vectors;
 
@@ -181,7 +182,8 @@ symbol_t* sym_counter;
 symbol_t* sym_string1;
 symbol_t* sym_string2;
 symbol_t* sym_string3;
-symbol_t* sym_logo;
+symbol_t* sym_logo1;
+symbol_t* sym_logo2;
 
 symbol_t* sym_box;
 symbol_t* sym_shirt1;
@@ -214,7 +216,8 @@ void initSymbols(void) {
    sym_string1    = &symbols[symbols_count++];
    sym_string2    = &symbols[symbols_count++];
    sym_string3    = &symbols[symbols_count++];
-   sym_logo       = &symbols[symbols_count++];
+   sym_logo1      = &symbols[symbols_count++];
+   sym_logo2      = &symbols[symbols_count++];
 
    sym_box        = &symbols[symbols_count++];
    sym_shirt1     = &symbols[symbols_count++];
@@ -333,23 +336,35 @@ static void timer_interrupt_4Hz(void) {
 }
 
 
-const uint8_t vector_logo[] = {
-    #include "art/logo.h"
+const uint8_t vector_logo1[] = {
+    #include "art/logo1.h"
+};
+
+const uint8_t vector_logo2[] = {
+    #include "art/logo2.h"
 };
 
 static void beginAttract( void ) {
    resetAnimate();
 
-   vec_logo = ALLOC( sizeof(vector_logo) );
-   memcpy( vec_logo, vector_logo, sizeof(vector_logo) );
+   vec_logo1 = ALLOC( sizeof(vector_logo1) );
+   memcpy( vec_logo1, vector_logo1, sizeof(vector_logo1) );
+   vec_logo2 = ALLOC( sizeof(vector_logo2) );
+   memcpy( vec_logo2, vector_logo2, sizeof(vector_logo2) );
 }
 
+#define LOGO1_WIDTH  860
+#define LOGO2_WIDTH  1150
+#define LOGO_SCALE   0x80
+
 static void endAttract( void ) {
-   sym_logo->visible = false;
+   sym_logo1->visible = false;
+   sym_logo2->visible = false;
    sym_string1->visible = false;
    sym_string2->visible = false;
    sym_string3->visible = false;
-   FREE( vec_logo );
+   FREE( vec_logo1 );
+   FREE( vec_logo2 );
    FREE( vec_string1 );
    FREE( vec_string2 );
    FREE( vec_string3 );
@@ -379,8 +394,7 @@ static bool drawAttract( void ) {
       last_tick = 0;
       endAttract();
       beginAttract();
-      drawSymbol( sym_logo, vec_logo, MIN_X, CENTER_Y, SEGA_ANGLE(0), 0x40 );
-      state = 2;
+      state = 0;
    }
 
    switch ( state ) {
@@ -391,24 +405,9 @@ static bool drawAttract( void ) {
          writeDebug('h',(uint16_t)x);
          heap_free( heap, x );
 
-         drawSymbol( sym_logo, vec_logo, MAX_X, CENTER_Y, SEGA_ANGLE(0), 0x80 );
-         setTrajectory( SID(sym_logo), 4, SEGA_ANGLE(270) );
-         const char s[] = "game over";
-         vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-         drawString( sym_string1, vec_string1, CENTER_X-130, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_WHITE, s );
-         last_tick = system_tick;
-         state++;
-         break; }
-      
-      case 1:
-         if ( system_tick - last_tick > SECONDS(6) ) {
-            sym_string1->visible = false;
-            FREE( vec_string1 );
-            state++;
-         }
-         break;
+         drawSymbol( sym_logo1, vec_logo1, MAX_X, CENTER_Y, SEGA_ANGLE(0), LOGO_SCALE );
+         setTrajectory( SID(sym_logo1), 4, SEGA_ANGLE(270) );
 
-      case 2: {
          char s[12] = {0,};
          uint8_t color = 0;
          if ( _coin_counter > 0 ) {
@@ -420,12 +419,32 @@ static bool drawAttract( void ) {
          }
          vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
          drawString( sym_string1, vec_string1, CENTER_X-120, GAME_TEXT_Y, GAME_TEXT_SIZE, color, s );
-         last_tick = system_tick;
+         state++;
+         break; }
+      
+      case 1:
+         if ( !sym_logo2->visible && sym_logo1->x + LOGO1_WIDTH < MAX_X ) {
+            drawSymbol( sym_logo2, vec_logo2, MAX_X, CENTER_Y, SEGA_ANGLE(0), LOGO_SCALE );
+            setTrajectory( SID(sym_logo2), 4, SEGA_ANGLE(270) );
+
+            sym_string1->visible = false;
+            FREE( vec_string1 );
+            state++;
+         }
+         break;
+
+      case 2: {
+         const char s[] = "game over";
+         vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
+         drawString( sym_string1, vec_string1, CENTER_X-130, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_WHITE, s );
          state++;
          break; }
 
       case 3:
-         if ( system_tick - last_tick > SECONDS(3) ) {
+         if ( sym_logo1->visible && sym_logo1->x + LOGO1_WIDTH < MIN_X ) {
+            sym_logo1->visible = false;
+         }
+         if ( sym_logo2->x + LOGO2_WIDTH < MIN_X ) {
             sym_string1->visible = false;
             FREE( vec_string1 );            
             state++;
@@ -433,7 +452,8 @@ static bool drawAttract( void ) {
          break;
 
       case 4: {
-         sym_logo->visible = false;
+         sym_logo1->visible = false;
+         sym_logo2->visible = false;
          switch ( state_ix ) {
             case 0: {
                const char s[] = "lieutenant";

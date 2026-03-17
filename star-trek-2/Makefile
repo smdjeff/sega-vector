@@ -116,7 +116,7 @@ mame: roms
 
 art: prereq $(HDRS)
 
-$(ART_BUILD_DIR)/logo.h: art/logo.svg
+$(ART_BUILD_DIR)/logo%.h: art/logo%.svg
 	../tools/svg2sega.py --scale 2.0 --rotate 90 --speed 0 --origin-left --merge 1.0 --rdp 0 --no-opt --close $< > $@
 
 $(ART_BUILD_DIR)/shirt%.h: art/shirt%.svg
