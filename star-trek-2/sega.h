@@ -248,7 +248,7 @@ typedef struct {
 #define TIMER_TEXT_Y    (MAX_Y-60)
 #define TIMER_TEXT_SIZE 0xF0
 
-#define HITBOX_SZ       60
+#define HITBOX_SZ       80
 #define MAX_SYMBOLS     32
 
 #define COIN_DROP       0x24
