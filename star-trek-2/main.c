@@ -686,7 +686,7 @@ static void beginGameOver(void) {
    if ( score <= high_score[2] ) {
       const char s[] = "game over";
       vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-      drawString( sym_string1, vec_string1, CENTER_X-160, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_RED, s );
+      drawString( sym_string1, vec_string1, CENTER_X-160, CENTER_Y-40, 0xf0, SEGA_COLOR_RED, s );
    }  else {
       const char s[] = "high score";
       vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
