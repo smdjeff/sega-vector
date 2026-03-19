@@ -1,20 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="94px" height="138px" viewBox="0 0 94 138" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg width="85px" height="136px" viewBox="0 0 85 136" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
     <title>crystal3</title>
     <desc>Created with Sketch.</desc>
     <defs></defs>
     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <g id="crystals" transform="translate(-585.000000, -548.000000)" stroke="#F5A4E1" stroke-width="2">
-            <g id="crystal3" transform="translate(586.000000, 553.000000)">
-                <polygon id="Path-17" points="28.5097656 0.548828125 1.43164062 44.3222656 20.9492188 50.296875"></polygon>
-                <polygon id="Path-18" points="29.1699219 0.876953125 63.0566406 15.9082031 52.5859375 39.5058594"></polygon>
-                <polyline id="Path-19" points="0.517578125 46.2617188 13.6895811 78.1745647 19.3984375 92.0058594 70.7070312 74.4550781 52.2617188 39.6914062 22.6308594 49.4707031"></polyline>
-                <polyline id="Path-20" points="22.1582031 49.6972656 14.4746094 79.9785156 9.39648437 108.539062 0.072265625 46.7617188"></polyline>
-                <polygon id="Path-21" points="20.2441406 92.8789062 9.71289062 109.371094 40.3671875 129.548828"></polygon>
-                <polyline id="Path-22" points="40.8632812 85.8144531 40.8632812 127.429688 71.2363281 76.5136719 73.7949219 101.97168 44.3242188 127.429688"></polyline>
-                <polygon id="Path-23" points="63.7480469 17.6972656 70.7929688 72.5605469 90.6523438 72.5605469"></polygon>
-                <path d="M90.1289062,73.3144531 L74.1210938,101.134766" id="Path-24"></path>
+        <g id="crystals" transform="translate(-585.000000, -552.000000)" stroke="#F5A4E1">
+            <g id="crystal3" transform="translate(586.000000, 552.000000)">
+                <polygon id="Path-35" points="28.1103516 0.513671875 0.0205078125 46.4658203 8.74121094 110.030273 50.453125 134.833984 82.9101562 88.1142578 63.0966797 17.125"></polygon>
+                <polygon id="Path-36" points="28.3398438 1.57226562 20.9355469 92.6533203 50.1757812 133.967773 71.109375 75.2392578"></polygon>
+                <polyline id="Path-37" points="82.7871094 88.3193359 70.9541016 75.2470703 20.7353516 92.7509766 8.96777344 110.272461"></polyline>
             </g>
         </g>
     </g>

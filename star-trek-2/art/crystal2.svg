@@ -1,22 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="96px" height="141px" viewBox="0 0 96 141" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg width="91px" height="147px" viewBox="0 0 91 147" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
     <title>crystal2</title>
     <desc>Created with Sketch.</desc>
     <defs></defs>
     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <g id="crystals" transform="translate(-378.000000, -458.000000)" stroke="#F5A4E1" stroke-width="2">
-            <g id="crystal2" transform="translate(379.000000, 459.000000)">
-                <polygon id="Path-7" points="17.734375 0.642578125 8.171875 23.9414063 17.734375 28.5800781 32.4003906 23.9414063 37.2460938 17.1132812 40.609375 6.484375"></polygon>
-                <polyline id="Path-8" points="8.44726562 24.1992188 0.431640625 50 20.6601562 76.578125 16.9726562 28.7128906"></polyline>
-                <polyline id="Path-9" points="22.6660156 77.4648438 49.9003906 63.6738281 32.6347656 24.6269531"></polyline>
-                <polyline id="Path-10" points="38.0175781 17.6582031 65.8925781 46.421875 64.2666016 10.0673828 40.8496094 6.34375"></polyline>
-                <polyline id="Path-11" points="49.7539062 62.8769531 64.8867188 46.2578125 76.9921875 24.0058594 64.8867188 9.98632812"></polyline>
-                <polyline id="Path-12" points="0.091796875 50 34.9179688 129.306641 82.1816406 138.753906 93.3515625 83.9960938 77.2773438 25.8652344"></polyline>
-                <polyline id="Path-13" points="20.640625 77.5859375 34.4785156 127.332031 54.46875 121.775391"></polyline>
-                <path d="M53.2089844,120.65625 L21.8925781,78.0644531" id="Path-14"></path>
-                <polygon id="Path-15" points="80.046875 137.246094 53.9570312 122.240234 77.0703125 105.236328"></polygon>
-                <polyline id="Path-16" points="50.2519531 63.9648438 76.6210938 103.994141 92.75 83.9794922 66.3769531 45.9707031 76.6210938 103.994141"></polyline>
+        <g id="crystals" transform="translate(-378.000000, -460.000000)" stroke="#F5A4E1">
+            <g id="crystal2" transform="translate(379.000000, 460.000000)">
+                <polyline id="Path-7-Copy" points="82.46875 128.09668 72.7314453 120.421875 55.2373047 126.282227 53 139.142578"></polyline>
+                <polyline id="Path-7-Copy" points="36.8544922 8.49121094 34.7480469 22.5732422 19.5673828 29.1103516 8.25292969 18.8007812"></polyline>
+                <polygon id="Path-8" points="11.2617188 6.96875 0.0810546875 49 29.0244141 126.744141 53.078125 139.370117 63.7451172 146.388672 79.6982422 140.99707 88.6923828 102.601562 61.96875 25.9257812 27.1591797 0.935546875"></polygon>
+                <polyline id="Path-7" points="61.8222656 26.3359375 52.4853516 43.5498047 24.9355469 54.4804688 0.197265625 49"></polyline>
+                <polyline id="Path-9" points="88.2402344 102.003906 68.53125 87.8681641 40.7236328 98.5703125 29.1220703 127.347656"></polyline>
+                <polyline id="Path-10" points="19.8710938 29.0761719 25.0234375 54.6152344 40.2978516 98.5419922 55.1777344 126.291016"></polyline>
+                <polyline id="Path-11" points="72.8271484 121.092773 68.7001953 87.8076172 52.5146484 43.1074219 34.3759766 22.8945312"></polyline>
             </g>
         </g>
     </g>
