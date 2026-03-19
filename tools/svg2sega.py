@@ -31,6 +31,8 @@ parser.add_argument(      '--merge', nargs='?', const=1.0, type=float, default=1
                     help='simplify by merging collinear adjacent segments (10+ for agressive)')
 parser.add_argument(      '--rdp', nargs='?', const=1.0, type=float, default=0.0,
                     help='simplify with Ramer–Douglas–Peucker (10.0+ for agressive)')
+parser.add_argument(      '--no-stall', action='store_true',
+                    help='disable vector pipelline stall for first vector (default on)')
 parser.add_argument(      '--speed', type=int, default=10, help='0=full, 1=slow 10=fast')
 parser.add_argument(      '--close', action='store_true', help='close window on complete')
 parser.add_argument(      '--origin-left', action='store_true',
@@ -664,6 +666,7 @@ skk.pensize(2)
 skk.pendown()
 
 x3, y3 = 0.0, 0.0  # start at origin after centering
+stall_pending = not args.no_stall
 
 # Draw + emit Sega vectors in optimized order
 for st in stitched:
@@ -686,6 +689,11 @@ for st in stitched:
         printSegaVector(sega_color, x3, y3, sx, sy)
         # keep sega vector stream in sync with turtle position
         x3, y3 = sx, sy
+    if stall_pending:
+        print("   0x{:02x}, 0x{:02x}, 0x{:02x}, 0x{:02x},".format(
+            sega_color, 0, 0, 0))
+        sega_vector_count += 1
+        stall_pending = False
     if (args.speed): wn.tracer(1, args.speed)
 
     # Draw polyline (beam-on for each segment)

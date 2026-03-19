@@ -178,8 +178,8 @@ def drawSegaSymbol(vectors, speed):
         wn.tracer(0, 0)
         update_every = 0
     else:
-        wn.tracer(0, 0)
-        update_every = max(1, 200 // max(1, speed))
+        wn.tracer(1, speed)
+        update_every = 0
 
     skk.color('gray')
     skk.dot(8)
@@ -189,10 +189,11 @@ def drawSegaSymbol(vectors, speed):
         skk.setheading( float(args.rotate) - v.angle)
         drawVector(v.visible, v.color, v.length/2.0)
         if (args.debug):
+            skk.color('cyan')
             skk.write(f"{ix}")
         ix += 1
         drawVector(v.visible, v.color, v.length/2.0)
-        if (update_every and (ix % update_every == 0)):
+        if update_every and (ix % update_every == 0):
             wn.update()
 
     wn.update()
