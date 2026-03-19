@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="26px" height="689px" viewBox="0 0 26 689" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg width="26px" height="699px" viewBox="0 0 26 699" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
     <title>laser</title>
     <desc>Created with Sketch.</desc>
     <defs></defs>
     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <g id="crystals" transform="translate(-513.000000, -202.000000)" stroke-width="3.3">
-            <g id="laser" transform="translate(515.000000, 203.000000)">
-                <polyline id="Path-30" stroke="#F8E71C" points="0 0 12.540304 344 22 0"></polyline>
-                <path d="M12.459696,344 L12.459696,687.183594" id="Path-30" stroke="#000000" transform="translate(12.459696, 515.591797) rotate(-180.000000) translate(-12.459696, -515.591797) "></path>
+        <g id="crystals" transform="translate(-513.000000, -201.000000)" stroke-width="3.3">
+            <g id="laser" transform="translate(515.000000, 202.000000)">
+                <polyline id="Path-30" stroke="#F8E71C" points="0 0 12.540304 200 22 0"></polyline>
+                <path d="M12.459696,200.5 L12.459696,698" id="Path-30" stroke="#000000" transform="translate(12.459696, 449.250000) rotate(-180.000000) translate(-12.459696, -449.250000) "></path>
             </g>
         </g>
     </g>

@@ -134,10 +134,13 @@ $(ART_BUILD_DIR)/shirt%.h: art/shirt%.svg
 	../tools/svg2sega.py --scale 0.7 --rotate 90 --speed 0 --rdp 4.0 --close $< > $@
 
 $(ART_BUILD_DIR)/crystal%.h: art/crystal%.svg
-	../tools/svg2sega.py --scale 0.6 --rotate 90 --speed 0 --rdp 1.0 --close $< > $@
+	../tools/svg2sega.py --scale 0.6 --rotate 90 --speed 0 --merge 0 --rdp 0 --close $< > $@
+
+$(ART_BUILD_DIR)/jar.h: art/jar.svg
+	../tools/svg2sega.py --scale 0.6 --rotate 90 --speed 0 --merge 0.5 --rdp 0 --close $< > $@
 
 $(ART_BUILD_DIR)/%.h: art/%.svg
-	../tools/svg2sega.py --scale 0.6 --rotate 90 --speed 0 --rdp 2.0 --close $< > $@
+	../tools/svg2sega.py --scale 0.6 --rotate 90 --speed 0 --rdp 1.8 --close $< > $@
 
 $(ART_BUILD_DIR)/%.h: art/font/%.svg
 	../tools/svg2sega.py --scale 0.4 --rotate 90 --speed 0 --origin-top-left --close $< > $@

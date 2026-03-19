@@ -9,7 +9,7 @@ import canvasvg
 import re
 from xml.dom import minidom
 from svg.path import parse_path
-from svg.path.path import Line, CubicBezier
+from svg.path.path import Line, CubicBezier, QuadraticBezier, Arc
 
 
 parser = argparse.ArgumentParser(
@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('filename')
 parser.add_argument('-s', '--scale', nargs='?', const=1.0, type=float, default=1.0,
                     help='scale image up or down by percentage')
-parser.add_argument(      '--rotate', nargs='?', default=0, const=0, type=int, 
+parser.add_argument(      '--rotate', nargs='?', default=0, const=0, type=int,
                     help='rotate angle in degrees')
 parser.add_argument('-d', '--debug', action='store_true', help='print debug information')
 parser.add_argument(      '--no-retrace', action='store_true',
@@ -72,10 +72,6 @@ def apply_rotation(x, y, cx, cy, angle_deg):
     x_new = cx + (x - cx) * cos_theta - (y - cy) * sin_theta
     y_new = cy + (x - cx) * sin_theta + (y - cy) * cos_theta
     return x_new, y_new
-
-
-
-
 
 
 def inherited_stroke_rgb(node):
@@ -477,6 +473,41 @@ def element_to_path_d(element):
     return element.getAttribute("d")
 
 
+BEZIER_STEPS = 20
+BEZIER_FLATNESS = 2.0  # px: control-point deviation below this → single line
+
+
+def _bezier_flatness(seg):
+    """Max perpendicular distance of control point(s) from the start→end chord."""
+    p0 = (seg.start.real, seg.start.imag)
+    p3 = (seg.end.real,   seg.end.imag)
+    dx, dy = p3[0] - p0[0], p3[1] - p0[1]
+    lensq = dx*dx + dy*dy
+    def perp(p):
+        if lensq < 1e-12:
+            return math.hypot(p[0]-p0[0], p[1]-p0[1])
+        cross = (p[0]-p0[0])*dy - (p[1]-p0[1])*dx
+        return abs(cross) / math.sqrt(lensq)
+    if isinstance(seg, CubicBezier):
+        return max(perp((seg.control1.real, seg.control1.imag)),
+                   perp((seg.control2.real, seg.control2.imag)))
+    if isinstance(seg, QuadraticBezier):
+        return perp((seg.control.real, seg.control.imag))
+    return float('inf')  # Arc: always tessellate
+
+
+def _expand_seg(seg):
+    """Expand a path segment into a list of Line approximations."""
+    if isinstance(seg, Line):
+        return [seg]
+    if isinstance(seg, (CubicBezier, QuadraticBezier, Arc)):
+        if _bezier_flatness(seg) < BEZIER_FLATNESS:
+            return [Line(seg.start, seg.end)]
+        return [Line(seg.point(i / BEZIER_STEPS), seg.point((i + 1) / BEZIER_STEPS))
+                for i in range(BEZIER_STEPS)]
+    return []
+
+
 def split_path_into_strokes(d):
     """
     Convert a path d into one or more 'stroke' point lists.
@@ -487,28 +518,23 @@ def split_path_into_strokes(d):
     cur_pts = []
     last_end = None
 
-    for seg in parse_path(d):
-        if isinstance(seg, CubicBezier):
-            seg = Line(seg.start, seg.end)
+    for raw_seg in parse_path(d):
+        for seg in _expand_seg(raw_seg):
+            x0, y0 = seg.start.real, seg.start.imag
+            x1, y1 = seg.end.real, seg.end.imag
 
-        if not isinstance(seg, Line):
-            continue
-
-        x0, y0 = seg.start.real, seg.start.imag
-        x1, y1 = seg.end.real, seg.end.imag
-
-        if last_end is None:
-            cur_pts = [(x0, y0), (x1, y1)]
-        else:
-            if dist2((x0, y0), last_end) > JOIN_EPS2:
-                # start a new stroke
-                if len(cur_pts) >= 2:
-                    strokes.append(cur_pts)
+            if last_end is None:
                 cur_pts = [(x0, y0), (x1, y1)]
             else:
-                cur_pts.append((x1, y1))
+                if dist2((x0, y0), last_end) > JOIN_EPS2:
+                    # start a new stroke
+                    if len(cur_pts) >= 2:
+                        strokes.append(cur_pts)
+                    cur_pts = [(x0, y0), (x1, y1)]
+                else:
+                    cur_pts.append((x1, y1))
 
-        last_end = (x1, y1)
+            last_end = (x1, y1)
 
     if len(cur_pts) >= 2:
         strokes.append(cur_pts)
