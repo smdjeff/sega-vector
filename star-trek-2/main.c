@@ -159,7 +159,7 @@ void initVectors(void) {
    if ( vectors ) {
       heap_free( heap, vectors );
    }
-   vectors = heap_alloc( heap, sizeof(vector_t)*(1+1+5) );
+   vectors = heap_alloc( heap, sizeof(vector_t)*(1+1+6) );
    if ( !vectors ) kill( __LINE__ );
 
    vector_t* vec = vectors;
@@ -172,10 +172,11 @@ void initVectors(void) {
 
    vec_box = vec;
    initVector( vec, (60/1.4), SEGA_ANGLE(225), SEGA_CLEAR ); vec++;
+   initVector( vec, 0, 0,  SEGA_CLEAR ); vec++;  // sega g80 requires a pipeline stall
    initVector( vec, (60),     SEGA_ANGLE(0),   SEGA_COLOR_MAGENTA ); vec++;
    initVector( vec, (60),     SEGA_ANGLE(90),  SEGA_COLOR_MAGENTA ); vec++;
    initVector( vec, (60),     SEGA_ANGLE(180), SEGA_COLOR_MAGENTA ); vec++;
-   initVector( vec, (60),     SEGA_ANGLE(270), SEGA_COLOR_MAGENTA|SEGA_LAST );
+   initVector( vec, (60),     SEGA_ANGLE(270), SEGA_COLOR_MAGENTA|SEGA_LAST ); vec++;
 }
 
    
