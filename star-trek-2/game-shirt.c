@@ -40,7 +40,7 @@ void shirtGame( void ) {
 
    drawCountdown( 20, false );
 
-   const char s1[] = "red shirt always dies";
+   const char s1[] = "red shirt must die";
    vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
    drawString( sym_string1, vec_string1, GAME_TEXT_X, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s1 );
    delay(3000);
@@ -61,7 +61,7 @@ void shirtGame( void ) {
          int16_t pos = (angle > 511) ? (int16_t)angle - 1024 : (int16_t)angle;
          if (pos >  256) pos =  256;
          if (pos < -256) pos = -256;
-         colorize( vec_box, 5, SEGA_COLOR_BLUE );
+         colorize( vec_box, 6, SEGA_COLOR_BLUE );
          drawSymbol( sym_box, vec_box, CENTER_X + (pos << 1), SHIRT_Y, SEGA_ANGLE(0), 0xff );
       }
 
@@ -131,7 +131,7 @@ void shirtGame( void ) {
       }
 
       // shuffle done — switch box to magenta for firing
-      colorize( vec_box, 5, SEGA_COLOR_MAGENTA );
+      colorize( vec_box, 6, SEGA_COLOR_MAGENTA );
 
       symbol_t *sym_red_shirt = sym_shirt3;
 

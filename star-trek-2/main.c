@@ -407,7 +407,7 @@ static bool drawAttract( void ) {
             color = SEGA_COLOR_CYAN;
          }
          vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-         drawString( sym_string1, vec_string1, CENTER_X-130, GAME_TEXT_Y, GAME_TEXT_SIZE, color, s );
+         drawString( sym_string1, vec_string1, CENTER_X-140, GAME_TEXT_Y, GAME_TEXT_SIZE, color, s );
          state++;
          break; }
       
@@ -425,7 +425,7 @@ static bool drawAttract( void ) {
       case 2: {
          const char s[] = "game over";
          vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-         drawString( sym_string1, vec_string1, CENTER_X-180, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_WHITE, s );
+         drawString( sym_string1, vec_string1, CENTER_X-150, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_WHITE, s );
          state++;
          break; }
 
@@ -452,12 +452,12 @@ static bool drawAttract( void ) {
             case 1: {
                const char s[] = "commander";
                vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );         
-               drawString( sym_string1, vec_string1, CENTER_X-160, CENTER_Y+100, 0xA0, SEGA_COLOR_MAGENTA, s );
+               drawString( sym_string1, vec_string1, CENTER_X-180, CENTER_Y+100, 0xA0, SEGA_COLOR_MAGENTA, s );
                break; }
             case 2: {
                const char s[] = "captain";
                vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );         
-               drawString( sym_string1, vec_string1, CENTER_X-110, CENTER_Y+100, 0xA0, SEGA_COLOR_MAGENTA, s );
+               drawString( sym_string1, vec_string1, CENTER_X-120, CENTER_Y+100, 0xA0, SEGA_COLOR_MAGENTA, s );
                break; }
          }
          char s[] = "abc 1234";

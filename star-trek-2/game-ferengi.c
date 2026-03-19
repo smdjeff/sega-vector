@@ -212,7 +212,7 @@ void ferengiGame( void ) {
    symbol_t* lat_symbols[] = {sym_latinum1, sym_latinum2, sym_latinum3};
 
    spinner_vector_angle( true );
-   drawCountdown(60,false);
+   drawCountdown(30,false);
 
    uint16_t ear_tick        = system_tick - ((uint16_t)60 * 60 >> 4);  // first pick after SECONDS(1)
    uint16_t face_tick       = 0;
