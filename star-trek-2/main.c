@@ -9,6 +9,7 @@
 
 
 
+static volatile uint8_t spinner_value = 0;
 static volatile uint8_t nmi_counter = 0;
 volatile uint16_t system_tick = 0;
 static volatile uint8_t _coin_counter = 0;
@@ -46,6 +47,10 @@ void z80_rst_38h (void) __critical __interrupt(0) {
       timer_interrupt_4Hz();
    }
    div++;
+
+   PORT_370 = SELECT_SPINNER;
+   spinner_value = PORT_374;
+   PORT_370 = SELECT_BUTTONS;
 
    static uint8_t debounce = 0;
    static uint8_t button_last = 0xff;
@@ -166,11 +171,11 @@ void initVectors(void) {
    initVector( vec, 0xFF, SEGA_ANGLE(0), SEGA_COLOR_YELLOW|SEGA_LAST ); vec++;
 
    vec_box = vec;
-   initVector( vec, (HITBOX_SZ/1.4), SEGA_ANGLE(225), SEGA_CLEAR ); vec++;
-   initVector( vec, (HITBOX_SZ),     SEGA_ANGLE(0),   SEGA_COLOR_MAGENTA ); vec++;
-   initVector( vec, (HITBOX_SZ),     SEGA_ANGLE(90),  SEGA_COLOR_MAGENTA ); vec++;
-   initVector( vec, (HITBOX_SZ),     SEGA_ANGLE(180), SEGA_COLOR_MAGENTA ); vec++;
-   initVector( vec, (HITBOX_SZ),     SEGA_ANGLE(270), SEGA_COLOR_MAGENTA|SEGA_LAST );
+   initVector( vec, (60/1.4), SEGA_ANGLE(225), SEGA_CLEAR ); vec++;
+   initVector( vec, (60),     SEGA_ANGLE(0),   SEGA_COLOR_MAGENTA ); vec++;
+   initVector( vec, (60),     SEGA_ANGLE(90),  SEGA_COLOR_MAGENTA ); vec++;
+   initVector( vec, (60),     SEGA_ANGLE(180), SEGA_COLOR_MAGENTA ); vec++;
+   initVector( vec, (60),     SEGA_ANGLE(270), SEGA_COLOR_MAGENTA|SEGA_LAST );
 }
 
    
@@ -280,16 +285,13 @@ static void dumpSymbols(void) {
 }
 
 uint16_t spinner_vector_angle( bool reset ) {
-   PORT_370 = SELECT_SPINNER;
-   delay(1);
-   uint8_t value = PORT_374;
+   uint8_t value = spinner_value;
    bool dir = value & 0x01;
    value = value >> 1;
-   PORT_370 = SELECT_BUTTONS;
-   delay(1);
 
    static uint16_t angle = 0;
    static uint16_t lastvalue = 0;
+
    if ( reset ) {
       angle = 0;
    } else {
@@ -300,11 +302,13 @@ uint16_t spinner_vector_angle( bool reset ) {
       // spinner angle in degrees is about 5.6 * value
       // vector is SEGA_ANGLE( angle ), so 2.845 * 5.6 = ~16
       // #ifdef MAME_BUILD
-         delta >>= 1; // mame seems to increment the spinner inaccurately
+         // delta >>= 1; // mame seems to increment the spinner inaccurately
       // #else
          // seems to work great on real hardware
-         // delta <<= 4;  // x 16
+         delta <<= 2;  // x 4
       // #endif
+      // delta <<= 1; // 40hz timer mode
+
       if (dir) {
          // only ever counts down so we have to account for direction bit
          angle += delta;
@@ -318,21 +322,6 @@ uint16_t spinner_vector_angle( bool reset ) {
 }
 
 static void timer_interrupt_4Hz(void) {
-
-   switch( game_state ) {
-      case game_state_boot:
-         break;
-
-      case game_state_attract:
-         break;
-
-      case game_state_play:
-         break;
-
-      case game_state_highscore:
-         break;
-
-   }
 }
 
 
@@ -406,7 +395,7 @@ static bool drawAttract( void ) {
          heap_free( heap, x );
 
          drawSymbol( sym_logo1, vec_logo1, MAX_X, CENTER_Y, SEGA_ANGLE(0), LOGO_SCALE );
-         setTrajectory( SID(sym_logo1), 4, SEGA_ANGLE(270) );
+         setTrajectory( SID(sym_logo1), 8, SEGA_ANGLE(270) );
 
          char s[12] = {0,};
          uint8_t color = 0;
@@ -425,7 +414,7 @@ static bool drawAttract( void ) {
       case 1:
          if ( !sym_logo2->visible && sym_logo1->x + LOGO1_WIDTH < MAX_X ) {
             drawSymbol( sym_logo2, vec_logo2, MAX_X, CENTER_Y, SEGA_ANGLE(0), LOGO_SCALE );
-            setTrajectory( SID(sym_logo2), 4, SEGA_ANGLE(270) );
+            setTrajectory( SID(sym_logo2), 8, SEGA_ANGLE(270) );
 
             sym_string1->visible = false;
             FREE( vec_string1 );
@@ -436,7 +425,7 @@ static bool drawAttract( void ) {
       case 2: {
          const char s[] = "game over";
          vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-         drawString( sym_string1, vec_string1, CENTER_X-130, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_WHITE, s );
+         drawString( sym_string1, vec_string1, CENTER_X-180, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_WHITE, s );
          state++;
          break; }
 
@@ -529,7 +518,7 @@ static char initials[4] = {0,};
 static uint16_t vec_length = 0;
 
 static inline void redrawString( void ) {
-   drawString( sym_string3, vec_string3, CENTER_X-70, CENTER_Y-220, 0xF0, SEGA_COLOR_WHITE, initials );
+   drawString( sym_string3, vec_string3, CENTER_X-70, CENTER_Y, 0xF0, SEGA_COLOR_WHITE, initials );
 }
 
 static void beginDrawInitials( void ) {
@@ -737,7 +726,6 @@ static void super_loop(void) {
                if ( score < high_score[2] ) {
                   last_tick = system_tick;
                   game_state = game_state_game_over_pause;
-                  endGameOver();
                } else {
                   game_state = game_state_highscore;
                   beginDrawInitials();
