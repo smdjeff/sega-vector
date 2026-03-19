@@ -60,32 +60,15 @@ static const uint8_t DRIFT_STRENGTH[3]  = { 1, 2, 3 };
 // Auto-lock threshold
 #define LOCK_THRESHOLD_XY  15
 
-// Gauge: map distance to inverted scale (0xFF=perfect, 0x10=bad)
-// max_shift = log2 of max distance
-static uint8_t gaugeScale( int16_t dist, uint8_t max_shift ) {
-   if ( dist < 0 ) dist = -dist;
-   if ( dist >= ((int16_t)1 << max_shift) ) return 0x10;
-   uint16_t scaled;
-   if ( max_shift <= 8 ) {
-      scaled = (uint16_t)dist << (8 - max_shift);
-   } else {
-      scaled = (uint16_t)dist >> (max_shift - 8);
-   }
-   if ( scaled > 0xEF ) return 0x10;
-   uint8_t result = 0xFF - (uint8_t)scaled;
-   if ( result < 0x10 ) result = 0x10;
-   return result;
-}
-
 // 16-direction unit vectors (10-bit angle: 0=up, 256=right, 512=down, 768=left)
-static const int8_t RING_DX[16] = {  0, 1, 2, 2, 2, 2, 2, 1, 0,-1,-2,-2,-2,-2,-2,-1 };
-static const int8_t RING_DY[16] = { -2,-2,-2,-1, 0, 1, 2, 2, 2, 2, 2, 1, 0,-1,-2,-2 };
+static const int8_t RING_DX[16] = {  0, 4, 8, 8, 8, 8, 8, 4, 0,-4,-8,-8,-8,-8,-8,-4 };
+static const int8_t RING_DY[16] = { -8,-8,-8,-4, 0, 4, 8, 8, 8, 8, 8, 4, 0,-4,-8,-8 };
 
 // Push crystal in the direction of ring_angle
 static void ringPush( uint16_t angle, int16_t* cx, int16_t* cy ) {
    uint8_t d = (uint8_t)((angle + 32) >> 6) & 0x0F;
-   *cx -= (int16_t)RING_DX[d] * 3;
-   *cy += (int16_t)RING_DY[d] * 3;
+   *cx -= (int16_t)RING_DX[d];
+   *cy += (int16_t)RING_DY[d];
 }
 
 void crystalGame( void ) {
@@ -173,7 +156,7 @@ void crystalGame( void ) {
 
       // --- Show ghost crystal at target slot ---
       memcpy( vec_ghost, vec_c[ci], crystal_bytes[ci] );
-      colorize( vec_ghost, crystal_nvecs[ci], SEGA_COLOR_GRAY );
+      colorize( vec_ghost, crystal_nvecs[ci], SEGA_COLOR_BLUE );
       initSymbol( sym_ghost, vec_ghost );
       drawSymbol( sym_ghost, vec_ghost,
                   CRYSTAL_SLOT_X[ci], CRYSTAL_SLOT_Y[ci],
@@ -185,21 +168,17 @@ void crystalGame( void ) {
       drawSymbol( sym_circle2, vec_circle_art, CENTER_X, CENTER_Y, 0, 0xC0 );
 
       // --- Laser: hidden until fire is pressed ---
-      drawSymbol( sym_laser, vec_laser_art, CENTER_X, CENTER_Y, 0, 0xE0 );
+      drawSymbol( sym_laser, vec_laser_art, CENTER_X, CENTER_Y, 0, 0xB8 );
       sym_laser->visible = false;
-
-      // --- Active crystal color ---
-      colorize( vec_c[ci], crystal_nvecs[ci], SEGA_COLOR_MAGENTA );
 
       int16_t cx = crystal_sym[ci]->x;
       int16_t cy = crystal_sym[ci]->y;
 
       bool locked = false;
-      uint8_t fire_debounce = 0;
-      uint8_t fire_count = 0;
-      uint8_t laser_flash = 0;
+      uint16_t fire_tick = 0;
       uint8_t prev_buttons = 0;
       uint16_t drift_tick = system_tick;
+      uint8_t last_color = 0;
 
       while ( !locked && drawCountdown(0,true) ) {
 
@@ -214,27 +193,8 @@ void crystalGame( void ) {
          sym_ring->rotation = ring_angle;
          sym_laser->rotation = ring_angle;
 
-         // --- Laser flash: show for a few frames after fire ---
-         if ( laser_flash ) {
-            laser_flash--;
-            sym_laser->visible = (laser_flash > 0);
-         }
-
-         // --- Fire button: push crystal and flash laser ---
-
-         if ( !(prev_buttons & BUTTON_FIRE) ) fire_count = 0;
-         if ( fire_debounce ) fire_debounce--;
-         if ( (buttons & BUTTON_FIRE) && !fire_debounce && fire_count < 6 ) {
-            fire_debounce = 4;
-            fire_count++;
-            ringPush( ring_angle, &cx, &cy );
-            if ( fire_count == 1 ) {
-               sym_laser->visible = true;
-               laser_flash = 6;
-               SOUND_COMMAND = PHASER;
-            }
-         }
-         prev_buttons = buttons;
+         bool fire_active = fire_tick && (system_tick - fire_tick < SECONDS(0.1));
+         sym_laser->visible = fire_active;
 
          // --- Magnetic drift ---
          if ( system_tick - drift_tick >= 3 ) {
@@ -251,56 +211,64 @@ void crystalGame( void ) {
          if ( cy < MIN_Y + 40 ) cy = MIN_Y + 40;
          if ( cy > MAX_Y - 40 ) cy = MAX_Y - 40;
 
-         // Gently auto-rotate crystal toward its slot rotation
-         int16_t drot = (int16_t)(CRYSTAL_SLOT_ROT[ci] - crystal_sym[ci]->rotation) & 0x3FF;
-         if ( drot > 512 ) drot -= 1024;
-         if      ( drot >  2 ) crystal_sym[ci]->rotation = (crystal_sym[ci]->rotation + 2) & 0x3FF;
-         else if ( drot < -2 ) crystal_sym[ci]->rotation = (crystal_sym[ci]->rotation - 2) & 0x3FF;
-         else                  crystal_sym[ci]->rotation = CRYSTAL_SLOT_ROT[ci];
-
          crystal_sym[ci]->x = cx;
          crystal_sym[ci]->y = cy;
 
-         // --- Calculate alignment ---
-         int16_t dx = ABS( cx - CRYSTAL_SLOT_X[ci] );
-         int16_t dy = ABS( cy - CRYSTAL_SLOT_Y[ci] );
-         uint16_t dist = dx + dy;
+         // --- Fire button: push crystal and flash laser ---
 
-         // --- Crystal color based on proximity ---
-         uint8_t g_pos = gaugeScale( dist, 9 );
-         if      ( g_pos > 0xC0 ) colorize( vec_c[ci], crystal_nvecs[ci], SEGA_COLOR_BRWHITE );
-         else if ( g_pos > 0x80 ) colorize( vec_c[ci], crystal_nvecs[ci], SEGA_COLOR_CYAN );
-         else if ( g_pos > 0x40 ) colorize( vec_c[ci], crystal_nvecs[ci], SEGA_COLOR_GREEN );
-         else                     colorize( vec_c[ci], crystal_nvecs[ci], SEGA_COLOR_MAGENTA );
+         if ( (buttons & BUTTON_FIRE) && !(prev_buttons & BUTTON_FIRE) ) {
+            fire_tick = system_tick;
+            ringPush( ring_angle, &cx, &cy );
+            SOUND_COMMAND = PHASER;
+         }
+         prev_buttons = buttons;
 
-         // --- Jar color tracks proximity ---
-         if      ( dx < LOCK_THRESHOLD_XY && dy < LOCK_THRESHOLD_XY ) colorize( vec_jar, jar_nvecs, SEGA_COLOR_GREEN );
-         else if ( g_pos > 0x80 ) colorize( vec_jar, jar_nvecs, SEGA_COLOR_YELLOW );
-         else if ( g_pos > 0x40 ) colorize( vec_jar, jar_nvecs, SEGA_COLOR_CYAN );
-         else                     colorize( vec_jar, jar_nvecs, SEGA_COLOR_BLUE );
+         // After laser fire: auto-rotate and update color throughout debounce window
+         if ( fire_active ) {
+            int16_t drot = (int16_t)(CRYSTAL_SLOT_ROT[ci] - crystal_sym[ci]->rotation) & 0x3FF;
+            if ( drot > 512 ) drot -= 1024;
+            if      ( drot >  2 ) crystal_sym[ci]->rotation = (crystal_sym[ci]->rotation + 2) & 0x3FF;
+            else if ( drot < -2 ) crystal_sym[ci]->rotation = (crystal_sym[ci]->rotation - 2) & 0x3FF;
+            else                  crystal_sym[ci]->rotation = CRYSTAL_SLOT_ROT[ci];
 
-         // --- Auto-lock when crystal is close enough ---
-         if ( dx < LOCK_THRESHOLD_XY && dy < LOCK_THRESHOLD_XY ) {
-            locked = true;
-            locked_count++;
-            score += 2 + (ci << 1);
-            SOUND_COMMAND = DOCK;
-
-            sym_ghost->visible = false;
-            sym_laser->visible = false;
-
-            // Snap crystal to slot
-            crystal_sym[ci]->x        = CRYSTAL_SLOT_X[ci];
-            crystal_sym[ci]->y        = CRYSTAL_SLOT_Y[ci];
-            crystal_sym[ci]->rotation = CRYSTAL_SLOT_ROT[ci];
-            colorize( vec_c[ci], crystal_nvecs[ci], SEGA_COLOR_BRWHITE );
-
-            // Flash celebration
-            for ( uint8_t f = 0; f < 6; f++ ) {
-               colorize( vec_jar, jar_nvecs, (f & 1) ? SEGA_COLOR_GREEN : SEGA_COLOR_CYAN );
-               waitAnimate( 4 );
+            // --- Crystal color based on proximity (only colorize on change) ---
+            int16_t dx = ABS( cx - CRYSTAL_SLOT_X[ci] );
+            int16_t dy = ABS( cy - CRYSTAL_SLOT_Y[ci] );
+            uint16_t dist = dx + dy;
+            uint8_t new_color = ( dist < 256 ) ? SEGA_COLOR_MAGENTA :
+                                ( dist < 384 ) ? SEGA_COLOR_YELLOW  : SEGA_COLOR_CYAN;
+            if ( new_color != last_color ) {
+               colorize( vec_c[ci], crystal_nvecs[ci], new_color );
+               last_color = new_color;
             }
          }
+
+         // --- Auto-lock when crystal is close enough ---
+         {  int16_t dx = ABS( cx - CRYSTAL_SLOT_X[ci] );
+            int16_t dy = ABS( cy - CRYSTAL_SLOT_Y[ci] );
+            if ( dx < LOCK_THRESHOLD_XY && dy < LOCK_THRESHOLD_XY ) {
+               locked = true;
+               locked_count++;
+               score += 2 + (ci << 1);
+               SOUND_COMMAND = DOCK;
+
+               sym_ghost->visible = false;
+               sym_laser->visible = false;
+
+               // Snap crystal to slot
+               crystal_sym[ci]->x        = CRYSTAL_SLOT_X[ci];
+               crystal_sym[ci]->y        = CRYSTAL_SLOT_Y[ci];
+               crystal_sym[ci]->rotation = CRYSTAL_SLOT_ROT[ci];
+
+               // Flash celebration
+               for (uint8_t color = 0; color < 0x3F; color++) {
+                  colorize( vec_c[ci], crystal_nvecs[ci], color );
+                  static uint16_t lt = 0;
+                  while ( system_tick == lt ) { __asm__( "nop" ); }
+                  lt = system_tick;
+               }
+            }
+         } // end auto-lock block
 
       } // end while for this crystal
 

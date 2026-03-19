@@ -51,11 +51,19 @@ void shirtGame( void ) {
 
    while ( drawCountdown(0, false) ) {
 
-      sym_box->visible = false;
-
       drawSymbol( sym_shirt1, vec_shirt_yellow, SHIRT_X[0], SHIRT_Y, SEGA_ANGLE(0), 0x80 );
       drawSymbol( sym_shirt2, vec_shirt_blue,   SHIRT_X[1], SHIRT_Y, SEGA_ANGLE(0), 0x80 );
       drawSymbol( sym_shirt3, vec_shirt_red,    SHIRT_X[2], SHIRT_Y, SEGA_ANGLE(0), 0x80 );
+
+      // show box in blue during shuffling (button disabled)
+      {
+         uint16_t angle = spinner_vector_angle(false);
+         int16_t pos = (angle > 511) ? (int16_t)angle - 1024 : (int16_t)angle;
+         if (pos >  256) pos =  256;
+         if (pos < -256) pos = -256;
+         colorize( vec_box, 5, SEGA_COLOR_BLUE );
+         drawSymbol( sym_box, vec_box, CENTER_X + (pos << 1), SHIRT_Y, SEGA_ANGLE(0), 0xff );
+      }
 
       for (uint8_t i = 0; i < 4; i++) {
 
@@ -111,8 +119,19 @@ void shirtGame( void ) {
                   n_moving--;
                }
             }
+            // update box position during shuffle (button still disabled)
+            {
+               uint16_t angle = spinner_vector_angle(false);
+               int16_t pos = (angle > 511) ? (int16_t)angle - 1024 : (int16_t)angle;
+               if (pos >  256) pos =  256;
+               if (pos < -256) pos = -256;
+               sym_box->x = CENTER_X + (pos << 1);
+            }
          }
       }
+
+      // shuffle done — switch box to magenta for firing
+      colorize( vec_box, 5, SEGA_COLOR_MAGENTA );
 
       symbol_t *sym_red_shirt = sym_shirt3;
 
@@ -154,9 +173,10 @@ void shirtGame( void ) {
             break;
          }
          uint16_t angle = spinner_vector_angle( false );
-         int16_t dx, dy;
-         vectorToXY(angle, 500, &dx, &dy);
-         drawSymbol( sym_box, vec_box, CENTER_X+dx, SHIRT_Y, SEGA_ANGLE(0), 0xff );
+         int16_t pos = (angle > 511) ? (int16_t)angle - 1024 : (int16_t)angle;
+         if (pos >  256) pos =  256;
+         if (pos < -256) pos = -256;
+         drawSymbol( sym_box, vec_box, CENTER_X + (pos << 1), SHIRT_Y, SEGA_ANGLE(0), 0xff );
       } while ( drawCountdown(0,false) );
 
       sym_box->visible = false;
