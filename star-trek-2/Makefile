@@ -139,6 +139,9 @@ $(ART_BUILD_DIR)/crystal%.h: art/crystal%.svg
 $(ART_BUILD_DIR)/jar.h: art/jar.svg
 	../tools/svg2sega.py --scale 0.6 --rotate 90 --speed 0 --merge 0.5 --rdp 0 --close $< > $@
 
+$(ART_BUILD_DIR)/heart.h: art/heart.svg
+	../tools/svg2sega.py --scale 1.0 --rotate 90 --speed 0 --merge 0.5 --rdp 0 --close $< > $@
+
 $(ART_BUILD_DIR)/%.h: art/%.svg
 	../tools/svg2sega.py --scale 0.6 --rotate 90 --speed 0 --rdp 1.8 --close $< > $@
 
