@@ -238,15 +238,28 @@ def polygon_to_path(polygon):
     if not points:
         return None
 
+    transform = polygon.getAttribute("transform")
+    cx, cy, angle, sx, sy = parse_transform(transform)
+
     # FIX: allow "x,y x,y" and "x y x y"
     coords = points.replace(",", " ").split()
     if not coords:
         return None
 
-    d = f"M {coords[0]} {coords[1]}"
-    for i in range(2, len(coords), 2):
-        d += f" L {coords[i]} {coords[i + 1]}"
-    d += f" L {coords[0]} {coords[1]} Z"
+    pts = []
+    for i in range(0, len(coords), 2):
+        x = float(coords[i])
+        y = float(coords[i + 1])
+        if sx != 1.0 or sy != 1.0:
+            x, y = apply_scale(x, y, cx, cy, sx, sy)
+        if angle:
+            x, y = apply_rotation(x, y, cx, cy, angle)
+        pts.append((x, y))
+
+    d = f"M {pts[0][0]} {pts[0][1]}"
+    for x, y in pts[1:]:
+        d += f" L {x} {y}"
+    d += f" L {pts[0][0]} {pts[0][1]} Z"
 
     if args.debug:
         print(f"polygon_to_path: {d}")
@@ -569,17 +582,29 @@ for element in elements:
     if args.debug:
         print(element.toxml())
 
-    # translate-only group offsets
+    # translate-only group offsets (from parents; element-level translates in
+    # the translate-op-translate pattern cancel, so only rotation/scale matters)
     ptx, pty = sum_parent_translate(element)
+
+    # For <path> elements, apply the element's own rotation/scale here.
+    # (polygon/polyline/circle converters already bake in their own transforms.)
+    elem_cx, elem_cy, elem_angle, elem_sx, elem_sy = 0.0, 0.0, 0.0, 1.0, 1.0
+    if element.tagName == "path" and element.hasAttribute("transform"):
+        elem_cx, elem_cy, elem_angle, elem_sx, elem_sy = parse_transform(
+            element.getAttribute("transform"))
 
     d = element_to_path_d(element)
     if not d:
         continue
 
     for stroke_pts in split_path_into_strokes(d):
-        # apply parent translate now (still SVG coords)
+        # apply element's own rotation/scale then parent translate (SVG coords)
         pts_t = []
         for (x, y) in stroke_pts:
+            if elem_sx != 1.0 or elem_sy != 1.0:
+                x, y = apply_scale(x, y, elem_cx, elem_cy, elem_sx, elem_sy)
+            if elem_angle:
+                x, y = apply_rotation(x, y, elem_cx, elem_cy, elem_angle)
             x2 = x + ptx
             y2 = y + pty
             pts_t.append((x2, y2))
