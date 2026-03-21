@@ -38,12 +38,13 @@ void shirtGame( void ) {
    drawSymbol( sym_shirt2, vec_shirt_blue,   SHIRT_X[1], SHIRT_Y, SEGA_ANGLE(0), 0x80 );
    drawSymbol( sym_shirt3, vec_shirt_red,    SHIRT_X[2], SHIRT_Y, SEGA_ANGLE(0), 0x80 );
 
+   spinner_vector_angle( SPIN_RESET );
    drawCountdown( 20, false );
 
    const char s1[] = "red shirt must die";
    vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
    drawString( sym_string1, vec_string1, GAME_TEXT_X, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s1 );
-   delay(3000);
+   delayOrButton(4000);
    sym_string1->visible = false;
    FREE( vec_string1 );
 
@@ -57,7 +58,7 @@ void shirtGame( void ) {
 
       // show box in blue during shuffling (button disabled)
       {
-         uint16_t angle = spinner_vector_angle(false);
+         uint16_t angle = spinner_vector_angle( SPIN_NORMAL );
          int16_t pos = (angle > 511) ? (int16_t)angle - 1024 : (int16_t)angle;
          if (pos >  256) pos =  256;
          if (pos < -256) pos = -256;
@@ -121,7 +122,7 @@ void shirtGame( void ) {
             }
             // update box position during shuffle (button still disabled)
             {
-               uint16_t angle = spinner_vector_angle(false);
+               uint16_t angle = spinner_vector_angle( SPIN_NORMAL );
                int16_t pos = (angle > 511) ? (int16_t)angle - 1024 : (int16_t)angle;
                if (pos >  256) pos =  256;
                if (pos < -256) pos = -256;
@@ -172,7 +173,7 @@ void shirtGame( void ) {
             setStop( SID(sym_shirt3) );
             break;
          }
-         uint16_t angle = spinner_vector_angle( false );
+         uint16_t angle = spinner_vector_angle( SPIN_NORMAL );
          int16_t pos = (angle > 511) ? (int16_t)angle - 1024 : (int16_t)angle;
          if (pos >  256) pos =  256;
          if (pos < -256) pos = -256;

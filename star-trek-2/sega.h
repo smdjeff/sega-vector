@@ -330,9 +330,17 @@ void ferengiGame( void );
 ////////////////////////////////////
 // externs to main
 void say(uint8_t i);
-uint16_t spinner_vector_angle( bool reset );
+typedef enum {
+   SPIN_RESET  = 0,
+   SPIN_SLOW   = 1,
+   SPIN_NORMAL = 2,
+   SPIN_FAST   = 4
+} spinner_t;
+uint16_t spinner_vector_angle( spinner_t mode );
 void waitAnimate( uint16_t ticks );
+void delayOrButton(uint16_t ms);
 void delay(uint16_t ms);
+void waitVectorRefresh(void);
 
 extern volatile uint16_t system_tick;
 extern uint16_t score;

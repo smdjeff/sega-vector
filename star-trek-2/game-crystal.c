@@ -37,17 +37,17 @@ extern symbol_t* sym_crystal1;
 extern symbol_t* sym_crystal2;
 extern symbol_t* sym_crystal3;
 
-#define sym_ghost    sym_latinum1
-#define sym_circle1  sym_latinum2
-#define sym_circle2  sym_latinum3
-#define sym_ring     sym_shirt1
-#define sym_laser    sym_shirt2
-
-extern symbol_t* sym_latinum1;
-extern symbol_t* sym_latinum2;
-extern symbol_t* sym_latinum3;
+extern symbol_t* sym_sparkle1;
+extern symbol_t* sym_sparkle2;
+extern symbol_t* sym_sparkle3;
 extern symbol_t* sym_shirt1;
 extern symbol_t* sym_shirt2;
+
+#define sym_ghost    sym_sparkle1
+#define sym_circle1  sym_sparkle2
+#define sym_circle2  sym_sparkle3
+#define sym_ring     sym_shirt1
+#define sym_laser    sym_shirt2
 
 // Target slot positions inside the jar housing
 static const int16_t CRYSTAL_SLOT_X[3] = { CENTER_X-100, CENTER_X, CENTER_X+100 };
@@ -124,10 +124,10 @@ void crystalGame( void ) {
                   CRYSTAL_SLOT_ROT[i], 0x60 );
    }
 
-   const char s1[] = "laser crystals to center";
+   const char s1[] = "laser crystals to position";
    vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
    drawString( sym_string1, vec_string1, GAME_TEXT_X, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s1 );
-   delay(3000);
+   delayOrButton(4000);
    sym_string1->visible = false;
    FREE( vec_string1 );
 
@@ -146,7 +146,7 @@ void crystalGame( void ) {
    }
    SOUND_COMMAND = NOMAD_MOTION_END;
 
-   spinner_vector_angle( true );
+   spinner_vector_angle( SPIN_RESET );
    drawCountdown( 25, false );
 
    uint8_t locked_count = 0;
@@ -163,12 +163,12 @@ void crystalGame( void ) {
                   CRYSTAL_SLOT_ROT[ci], 0x60 );
 
       // --- Ring: always visible, rotates with spinner ---
-      drawSymbol( sym_ring, vec_ring_art, CENTER_X, CENTER_Y, 0, 0xC0 );
-      drawSymbol( sym_circle1, vec_circle_art, CENTER_X, CENTER_Y, 0, 0xB8 );
-      drawSymbol( sym_circle2, vec_circle_art, CENTER_X, CENTER_Y, 0, 0xC0 );
+      drawSymbol( sym_ring, vec_ring_art, CENTER_X, CENTER_Y, 0, 0xD0 );
+      drawSymbol( sym_circle1, vec_circle_art, CENTER_X, CENTER_Y, 0, 0xC8 );
+      drawSymbol( sym_circle2, vec_circle_art, CENTER_X, CENTER_Y, 0, 0xD0 );
 
       // --- Laser: hidden until fire is pressed ---
-      drawSymbol( sym_laser, vec_laser_art, CENTER_X, CENTER_Y, 0, 0xB8 );
+      drawSymbol( sym_laser, vec_laser_art, CENTER_X, CENTER_Y, 0, 0xC8 );
       sym_laser->visible = false;
 
       int16_t cx = crystal_sym[ci]->x;
@@ -187,7 +187,7 @@ void crystalGame( void ) {
 
          // --- Read controls ---
          uint8_t buttons = PORT_374;
-         uint16_t ring_angle = spinner_vector_angle( false );
+         uint16_t ring_angle = spinner_vector_angle( SPIN_NORMAL );
 
          // Spinner → ring and laser rotation
          sym_ring->rotation = ring_angle;
@@ -263,9 +263,7 @@ void crystalGame( void ) {
                // Flash celebration
                for (uint8_t color = 0; color < 0x3F; color++) {
                   colorize( vec_c[ci], crystal_nvecs[ci], color );
-                  static uint16_t lt = 0;
-                  while ( system_tick == lt ) { __asm__( "nop" ); }
-                  lt = system_tick;
+                  waitVectorRefresh();
                }
             }
          } // end auto-lock block

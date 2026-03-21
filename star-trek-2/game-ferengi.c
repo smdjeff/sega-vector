@@ -1,8 +1,12 @@
 #include "sega.h"
 
 
-const uint8_t vector_latinum[] = {
-   #include "art/latinum.h"
+const uint8_t vector_sparkle[] = {
+   #include "art/sparkle.h"
+};
+
+const uint8_t vector_heart[] = {
+   #include "art/heart.h"
 };
 
 const uint8_t vector_head[] = {
@@ -48,9 +52,9 @@ extern symbol_t* sym_shirt;
 extern symbol_t* sym_expression;
 extern symbol_t* sym_hand1;
 extern symbol_t* sym_hand2;
-extern symbol_t* sym_latinum1;
-extern symbol_t* sym_latinum2;
-extern symbol_t* sym_latinum3;
+extern symbol_t* sym_sparkle1;
+extern symbol_t* sym_sparkle2;
+extern symbol_t* sym_sparkle3;
 
 #define HEAD_X (CENTER_X)
 #define HEAD_Y (CENTER_Y-50)
@@ -67,16 +71,19 @@ static void drawExpression(vector_t* vec, expression_t ix) {
       switch (ix) {
       case HAPPY:
          sym_expression->visible = false;
+         waitVectorRefresh();
          memcpy( vec, vector_expression1, sizeof(vector_expression1) );
          sym_expression->visible = true;
          break;
       case ANGRY:
          sym_expression->visible = false;
+         waitVectorRefresh();
          memcpy( vec, vector_expression2, sizeof(vector_expression2) );
          sym_expression->visible = true;
          break;
       case ECSTATIC:
          sym_expression->visible = false;
+         waitVectorRefresh();
          memcpy( vec, vector_expression3, sizeof(vector_expression3) );
          sym_expression->visible = true;
          break;
@@ -88,21 +95,22 @@ static void drawExpression(vector_t* vec, expression_t ix) {
    }
 }
 
-static void drawSparkle(uint16_t x, uint16_t y, uint16_t angle) {
+static void drawSparkle(uint16_t x, uint16_t y, uint16_t angle, vector_t* vec) {
    symbol_t* sym = 0;
-   if (!sym_latinum1->visible) sym=sym_latinum1;
-   else if (!sym_latinum2->visible) sym=sym_latinum2;
-   else if (!sym_latinum3->visible) sym=sym_latinum3;
+   if (!sym_sparkle1->visible) sym=sym_sparkle1;
+   else if (!sym_sparkle2->visible) sym=sym_sparkle2;
+   else if (!sym_sparkle3->visible) sym=sym_sparkle3;
 
    if (sym) {
-      enableSymbol( sym, x, y, SEGA_ANGLE(0), 0x60 );
+      initSymbol( sym, vec );
+      enableSymbol( sym, x, y, SEGA_ANGLE(0), 0x80 );
       setTrajectory( SID(sym), 5, angle );
       setResizeSpeed( SID(sym), -3 );
       setRotationSpeed( SID(sym), 20 + (rand8() & 0x3F) );
    }
 }
 
-static void drawHand(uint16_t vec_angle, uint8_t ear, uint8_t sparkle_count) {
+static void drawHand(uint16_t vec_angle, uint8_t ear, uint8_t sparkle_count, vector_t* vec) {
    int16_t dx, dy, finger_x;
    vectorToXY( 0x03FF - vec_angle, 240, &dx, &dy);
 
@@ -119,10 +127,10 @@ static void drawHand(uint16_t vec_angle, uint8_t ear, uint8_t sparkle_count) {
    sym_hand1->rotation = (SEGA_ANGLE(0) + (dy >> 0)) & 0x03FF;
    sym_hand2->rotation = (SEGA_ANGLE(0) - (dy >> 0)) & 0x03FF;
 
-   if (dy < 0) {
+   if (dy <= 0) {
       finger_x = sym_hand2->rotation;
    } else {
-      finger_x = -((0x3FF - sym_hand2->rotation) >> 2); 
+      finger_x = -((0x3FF - sym_hand2->rotation) >> 2);
    }
 
    if ( ear == 1 ) {
@@ -130,7 +138,7 @@ static void drawHand(uint16_t vec_angle, uint8_t ear, uint8_t sparkle_count) {
       uint16_t x = (int16_t)sym_hand1->x - finger_x;
       uint16_t y = sym_hand1->y + 50;
       for ( uint8_t i = 0; i < sparkle_count; i++ )
-         drawSparkle( x, y, SEGA_ANGLE(225)+rand8() );
+         drawSparkle( x, y, SEGA_ANGLE(225)+rand8(), vec );
    }
 
    if ( ear == 2 ) {
@@ -138,7 +146,7 @@ static void drawHand(uint16_t vec_angle, uint8_t ear, uint8_t sparkle_count) {
       uint16_t x = (int16_t)sym_hand2->x + 10 + finger_x;
       uint16_t y = sym_hand2->y + 50;
       for ( uint8_t i = 0; i < sparkle_count; i++ )
-         drawSparkle( x, y, SEGA_ANGLE(45)+rand8() );
+         drawSparkle( x, y, SEGA_ANGLE(45)+rand8(), vec );
    }
 }
 
@@ -181,24 +189,21 @@ void ferengiGame( void ) {
    memcpy( vec_expression, vector_expression2, sizeof(vector_expression2) );
    drawSymbol( sym_expression, vec_expression, HEAD_X+20, HEAD_Y+70, SEGA_ANGLE(0), 0x80 );
 
-   const char s1[] = "rub the lobes";
-   const char s2[] = "oomox for latinum bars";
+   const char s1[] = "rub the lobes for oomox";
    vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
-   vec_string2 = ALLOC( measureString(s2) * sizeof(vector_t) );
    drawString( sym_string1, vec_string1, GAME_TEXT_X, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s1 );
-   delay(3000);
+   delayOrButton(4000);
    sym_string1->visible = false;
-   drawString( sym_string2, vec_string2, GAME_TEXT_X, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s2 );
-   delay(3000);
-   sym_string2->visible = false;
    FREE( vec_string1 );
-   FREE( vec_string2 );
 
-   vector_t* vec_latinum = ALLOC( sizeof(vector_latinum) );
-   memcpy( vec_latinum, vector_latinum, sizeof(vector_latinum) );
-   initSymbol( sym_latinum1, vec_latinum );
-   initSymbol( sym_latinum2, vec_latinum );
-   initSymbol( sym_latinum3, vec_latinum );
+   vector_t* vec_sparkle = ALLOC( sizeof(vector_sparkle) );
+   memcpy( vec_sparkle, vector_sparkle, sizeof(vector_sparkle) );
+   initSymbol( sym_sparkle1, vec_sparkle );
+   initSymbol( sym_sparkle2, vec_sparkle );
+   initSymbol( sym_sparkle3, vec_sparkle );
+
+   vector_t* vec_heart = ALLOC( sizeof(vector_heart) );
+   memcpy( vec_heart, vector_heart, sizeof(vector_heart) );
 
    vector_t* vec_hand1 = ALLOC( sizeof(vector_hand1) );
    memcpy( vec_hand1, vector_hand1, sizeof(vector_hand1) );
@@ -209,9 +214,8 @@ void ferengiGame( void ) {
 
    uint16_t last_spawn_angle = 0;
    uint16_t last_angle = 0;
-   symbol_t* lat_symbols[] = {sym_latinum1, sym_latinum2, sym_latinum3};
 
-   spinner_vector_angle( true );
+   spinner_vector_angle( SPIN_RESET );
    drawCountdown(30,false);
 
    uint16_t ear_tick        = system_tick - ((uint16_t)60 * 60 >> 4);  // first pick after SECONDS(1)
@@ -225,9 +229,9 @@ void ferengiGame( void ) {
 
 #define FRICTION_MED      10   // angry -> happy
 #define FRICTION_MED_LOW   7   // happy -> angry
-#define FRICTION_HIGH     60   // happy -> ecstatic
-#define FRICTION_HIGH_MED 50   // ecstatic -> happy
-#define FRICTION_MAX      65   // cap to keep decay time reasonable
+#define FRICTION_HIGH     30   // happy -> ecstatic
+#define FRICTION_HIGH_MED 25   // ecstatic -> happy
+#define FRICTION_MAX      35   // cap to keep decay time reasonable
 #define SPINNER_DELTA      4
 
    drawExpression( vec_expression, ANGRY );
@@ -242,7 +246,7 @@ void ferengiGame( void ) {
       waitAnimate(0);
 
       if ( score != last_score ) { drawScore( score, false ); last_score = score; }
-      uint16_t angle = spinner_vector_angle( false );
+      uint16_t angle = spinner_vector_angle( SPIN_FAST );
 
       if ( cdown != last_cdown ) {
          ear_interval = SECONDS(1) + ((uint16_t)cdown * cdown >> 4);
@@ -292,25 +296,32 @@ void ferengiGame( void ) {
       bool in_active_ear = (active_ear == 1 && in_right_ear) || (active_ear == 2 && in_left_ear);
       uint8_t ear = (moving && in_active_ear) ? active_ear : 0;
 
+      static uint8_t button_last = 0xff;
+      volatile uint8_t button = PORT_374;
       if ( ear ) {
          if ( friction < FRICTION_MAX ) friction++;
+         uint8_t button_edge = (button_last ^ button) & ~button; // falling edge only
+         if (button_edge & BUTTON_FIRE) {
+            friction+=10; // extra friction on that ear!
+         }
       }
+      button_last = button;
 
       if ( moving ) {
          static uint8_t sparkle_counter = 0;
          if (ear) sparkle_counter++;
          uint8_t sparkle_count = (expr_tier == ECSTATIC && !(sparkle_counter & 1)) ? 1 :
                                  (expr_tier == HAPPY    && !(sparkle_counter & 7)) ? 1 : 0;
-         drawHand( angle, ear, sparkle_count );
+         drawHand( angle, ear, sparkle_count, (expr_tier == ECSTATIC) ? vec_heart : vec_sparkle );
          if ( ear ) score += sparkle_count;
       }
 
    }
 
 
-   sym_latinum1->visible = false;
-   sym_latinum2->visible = false;
-   sym_latinum3->visible = false;
+   sym_sparkle1->visible = false;
+   sym_sparkle2->visible = false;
+   sym_sparkle3->visible = false;
    sym_hand1->visible = false;
    sym_hand2->visible = false;
    colorize( vec_ear1, sizeof(vector_ear1)/sizeof(vector_t), SEGA_COLOR_ORANGE );
@@ -328,7 +339,8 @@ void ferengiGame( void ) {
    sym_ear2->visible = false;
    sym_shirt->visible = false;
    sym_expression->visible = false;
-   FREE( vec_latinum );
+   FREE( vec_sparkle );
+   FREE( vec_heart );
    FREE( vec_head );
    FREE( vec_ear1 );
    FREE( vec_ear2 );

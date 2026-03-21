@@ -25,7 +25,6 @@ void z80_nmi(void) __critical __interrupt {
    nmi_counter++;
 }
 
-
 static void timer_interrupt_4Hz(void);
 
 // IRQ signal comes from multiple sources:
@@ -79,11 +78,27 @@ void z80_rst_38h (void) __critical __interrupt(0) {
 
 void delay(uint16_t ms) {
    while ( ms-- ) {
-      for (uint16_t i=0; i<27; i++) {   // 1ms at 3.86712 MHz (when XY board is clocking)
-      //for (uint16_t i=0; i<28; i++) {   // 1ms at 4.0 MHz (when CPU board is self clocking)
+      // this probably runs 2x fast on the new compiler
+      for (uint16_t i=0; i<27; i++) {
          __asm__( "nop" );
       }
    }
+}
+
+void delayOrButton(uint16_t ms) {
+   while ( ms-- ) {
+      volatile uint8_t button = PORT_374;
+      if (button & BUTTON_FIRE) return;
+      for (uint16_t i=0; i<50; i++) {
+         __asm__( "nop" );
+      }
+   }
+}
+
+void waitVectorRefresh(void) {
+   static uint16_t lt = 0;
+   while ( system_tick == lt ) { __asm__( "nop" ); }
+   lt = system_tick;
 }
 
 
@@ -127,18 +142,9 @@ void say(uint8_t i) {
 
 
 // cliché-based mini-game ideas
-// funny and dub could be inspiring for middle finger to the Trek license
-//  Or BishiBashi. Lolz on the burrito and toilet games at 1:45 and 20:00
-// https://youtu.be/OdYCigrFMSQ?si=89AgwZ54QfINq8Yr
-
 // * Rub the Ferengi ear.
 // * Red Shirt guy always dies - like a bishibashi
 // * Scotty fixing dilithium crystal matrix
-// other ideas:
-// 1. Captain Pike yes/no button.
-// 2. Tribbles - like Tron spiders.
-// 3. Dr McCoy Tricorder I'm a doctor not a miracle worker.
-
 
 vector_t* vectors     = NULL;
 vector_t* vec_blank   = NULL;
@@ -172,7 +178,7 @@ void initVectors(void) {
 
    vec_box = vec;
    initVector( vec, (60/1.4), SEGA_ANGLE(225), SEGA_CLEAR ); vec++;
-   initVector( vec, 0, 0,  SEGA_CLEAR ); vec++;  // sega g80 requires a pipeline stall
+   initVector( vec,    0,                   0, SEGA_CLEAR ); vec++;  // sega g80 requires a pipeline stall
    initVector( vec, (60),     SEGA_ANGLE(0),   SEGA_COLOR_MAGENTA ); vec++;
    initVector( vec, (60),     SEGA_ANGLE(90),  SEGA_COLOR_MAGENTA ); vec++;
    initVector( vec, (60),     SEGA_ANGLE(180), SEGA_COLOR_MAGENTA ); vec++;
@@ -203,9 +209,9 @@ symbol_t* sym_shirt;
 symbol_t* sym_expression;
 symbol_t* sym_hand1;
 symbol_t* sym_hand2;
-symbol_t* sym_latinum1;
-symbol_t* sym_latinum2;
-symbol_t* sym_latinum3;
+symbol_t* sym_sparkle1;
+symbol_t* sym_sparkle2;
+symbol_t* sym_sparkle3;
 
 symbol_t* sym_jar;
 symbol_t* sym_crystal1;
@@ -237,9 +243,9 @@ void initSymbols(void) {
    sym_expression = &symbols[symbols_count++];
    sym_hand1      = &symbols[symbols_count++];
    sym_hand2      = &symbols[symbols_count++];
-   sym_latinum1   = &symbols[symbols_count++];
-   sym_latinum2   = &symbols[symbols_count++];
-   sym_latinum3   = &symbols[symbols_count++];
+   sym_sparkle1   = &symbols[symbols_count++];
+   sym_sparkle2   = &symbols[symbols_count++];
+   sym_sparkle3   = &symbols[symbols_count++];
 
    sym_jar        = &symbols[symbols_count++];
    sym_crystal1   = &symbols[symbols_count++];
@@ -285,7 +291,7 @@ static void dumpSymbols(void) {
    }
 }
 
-uint16_t spinner_vector_angle( bool reset ) {
+uint16_t spinner_vector_angle( spinner_t mode ) {
    uint8_t value = spinner_value;
    bool dir = value & 0x01;
    value = value >> 1;
@@ -293,7 +299,7 @@ uint16_t spinner_vector_angle( bool reset ) {
    static uint16_t angle = 0;
    static uint16_t lastvalue = 0;
 
-   if ( reset ) {
+   if ( mode == SPIN_RESET ) {
       angle = 0;
    } else {
       if ( value > lastvalue ) {
@@ -302,13 +308,7 @@ uint16_t spinner_vector_angle( bool reset ) {
       uint8_t delta = lastvalue - value;
       // spinner angle in degrees is about 5.6 * value
       // vector is SEGA_ANGLE( angle ), so 2.845 * 5.6 = ~16
-      // #ifdef MAME_BUILD
-         // delta >>= 1; // mame seems to increment the spinner inaccurately
-      // #else
-         // seems to work great on real hardware
-         delta <<= 2;  // x 4
-      // #endif
-      // delta <<= 1; // 40hz timer mode
+      delta <<= mode;
 
       if (dir) {
          // only ever counts down so we have to account for direction bit
@@ -531,7 +531,7 @@ static void beginDrawInitials( void ) {
    vec_length = measureString(s);
    vec_string3 = ALLOC( vec_length * sizeof(vector_t) );
    redrawString();
-   spinner_vector_angle( true );
+   spinner_vector_angle( SPIN_RESET );
 
    if ( score >= high_score[0] ) {
       high_index = 0;
@@ -561,7 +561,7 @@ static void beginDrawInitials( void ) {
 
 
 static bool drawInitials( void ) {
-   uint16_t vec_angle = spinner_vector_angle( false );
+   uint16_t vec_angle = spinner_vector_angle( SPIN_SLOW );
    char ch = 'a' + div_16( vec_angle, 39 );
    ch = MIN( MAX(ch, 'a'), 'z' );
 
@@ -590,9 +590,7 @@ static bool drawInitials( void ) {
 //         say( CONGRATULATIONS );
          for (uint8_t color = 0; color < 0x3F; color++) {
             colorize( vec_string3, vec_length, color );
-            static uint16_t lt = 0;
-            while ( system_tick == lt ) { __asm__( "nop" ); }
-            lt = system_tick;
+            waitVectorRefresh();
          }
          sym_string3->visible = false;
          FREE( vec_string3 );
@@ -652,14 +650,14 @@ uint8_t drawCountdown( uint8_t initValue, bool speak ) {
 static void beginPlay(void) {
    score = 0;
    drawScore(score, true);
-   spinner_vector_angle( true );
+   spinner_vector_angle( SPIN_RESET );
 }
 
 
 static bool drawPlay(void) {
 
-   resetAnimate();
-   shirtGame();
+   // resetAnimate();
+   // shirtGame();
 
    resetAnimate();
    ferengiGame();
@@ -676,7 +674,7 @@ static void beginGameOver(void) {
    if ( score <= high_score[2] ) {
       const char s[] = "game over";
       vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
-      drawString( sym_string1, vec_string1, CENTER_X-160, CENTER_Y-40, 0xf0, SEGA_COLOR_RED, s );
+      drawString( sym_string1, vec_string1, CENTER_X-230, CENTER_Y-40, 0xf0, SEGA_COLOR_RED, s );
    }  else {
       const char s[] = "high score";
       vec_string1 = ALLOC( measureString(s) * sizeof(vector_t) );
