@@ -1,23 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="773px" height="774px" viewBox="0 0 773 774" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg width="52px" height="765px" viewBox="0 0 52 765" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
     <title>ring</title>
     <desc>Created with Sketch.</desc>
     <defs></defs>
     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <g id="crystals" transform="translate(-139.000000, -165.000000)" stroke="#FFFFFF" stroke-width="3">
-            <g id="ring" transform="translate(139.000000, 165.000000)">
-                <path d="M25.5996094,386.140625 L0.91015625,373.849609" id="Path-31"></path>
-                <path d="M25.4355469,387.033203 L1.921875,397.619141" id="Path-32"></path>
-                <path d="M772.089844,400.150391 L747.400391,387.859375" id="Path-31" transform="translate(759.745117, 394.004883) rotate(-180.000000) translate(-759.745117, -394.004883) "></path>
-                <path d="M771.078125,376.380859 L747.564453,386.966797" id="Path-32" transform="translate(759.321289, 381.673828) rotate(-180.000000) translate(-759.321289, -381.673828) "></path>
-                <path d="M387.359375,39.0978792 L399.650391,1.41015625 L387.359375,39.0978792 Z" id="Path-31"></path>
-                <path d="M386.466797,38.8474426 L376,1.86502076 L386.466797,38.8474426 Z" id="Path-32"></path>
-                <path d="M391.839844,766.390625 L367.150391,754.099609" id="Path-31" transform="translate(379.495117, 760.245117) rotate(-90.000000) translate(-379.495117, -760.245117) "></path>
-                <path d="M403.583008,754.52832 L380.069336,765.114258" id="Path-32" transform="translate(391.826172, 759.821289) rotate(-90.000000) translate(-391.826172, -759.821289) "></path>
-                <path d="M398.898438,2.10351562 L398.898438,26.3535156" id="Path-29" transform="translate(398.898438, 14.228516) scale(1, -1) translate(-398.898438, -14.228516) "></path>
-                <path d="M375.25,0.732421875 L375.25,25.5761719" id="Path-33" transform="translate(375.250000, 13.154297) scale(1, -1) translate(-375.250000, -13.154297) "></path>
-                <polyline id="Path-34" points="361.597656 1.515625 361.597656 38.4980469 410.757812 38.4980469 410.757812 1.515625"></polyline>
+        <g id="crystals" transform="translate(-501.000000, -189.000000)">
+            <g id="ring" transform="translate(502.000000, 190.000000)">
+                <polygon id="Path-34" stroke="#FFFFFF" transform="translate(25.000000, 52.500000) scale(1, -1) translate(-25.000000, -52.500000) " points="1.20952692e-11 70 1.18802745e-11 105 50 105 50 70 25 -2.84217094e-14"></polygon>
+                <path d="M25,104 L25,764" id="Path-30" stroke="#000000" transform="translate(25.000000, 434.000000) rotate(-180.000000) translate(-25.000000, -434.000000) "></path>
             </g>
         </g>
     </g>
