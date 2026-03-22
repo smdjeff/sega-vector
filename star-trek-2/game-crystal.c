@@ -235,8 +235,8 @@ void crystalGame( void ) {
             int16_t dx = ABS( cx - CRYSTAL_SLOT_X[ci] );
             int16_t dy = ABS( cy - CRYSTAL_SLOT_Y[ci] );
             uint16_t dist = dx + dy;
-            uint8_t new_color = ( dist < 256 ) ? SEGA_COLOR_MAGENTA :
-                                ( dist < 384 ) ? SEGA_COLOR_YELLOW  : SEGA_COLOR_CYAN;
+            uint8_t new_color = ( dist < 200 ) ? SEGA_COLOR_MAGENTA :
+                                ( dist < 300 ) ? SEGA_COLOR_YELLOW  : SEGA_COLOR_CYAN;
             if ( new_color != last_color ) {
                colorize( vec_c[ci], crystal_nvecs[ci], new_color );
                last_color = new_color;

@@ -68,30 +68,21 @@ typedef enum {
 static void drawExpression(vector_t* vec, expression_t ix) {
    static expression_t last_expression = 0;
    if (ix != last_expression) {
+      sym_expression->visible = false;
+      waitVectorRefresh();
       switch (ix) {
       case HAPPY:
-         sym_expression->visible = false;
-         waitVectorRefresh();
          memcpy( vec, vector_expression1, sizeof(vector_expression1) );
-         sym_expression->visible = true;
          break;
       case ANGRY:
-         sym_expression->visible = false;
-         waitVectorRefresh();
          memcpy( vec, vector_expression2, sizeof(vector_expression2) );
-         sym_expression->visible = true;
          break;
       case ECSTATIC:
-         sym_expression->visible = false;
-         waitVectorRefresh();
          memcpy( vec, vector_expression3, sizeof(vector_expression3) );
-         sym_expression->visible = true;
-         break;
-      default:
-         sym_expression->visible = false;
          break;
       }
       last_expression = ix;
+      sym_expression->visible = true;
    }
 }
 
@@ -189,7 +180,7 @@ void ferengiGame( void ) {
    memcpy( vec_expression, vector_expression2, sizeof(vector_expression2) );
    drawSymbol( sym_expression, vec_expression, HEAD_X+20, HEAD_Y+70, SEGA_ANGLE(0), 0x80 );
 
-   const char s1[] = "rub the lobes for oomox";
+   const char s1[] = "rub lobes for oomox";
    vec_string1 = ALLOC( measureString(s1) * sizeof(vector_t) );
    drawString( sym_string1, vec_string1, GAME_TEXT_X, GAME_TEXT_Y, GAME_TEXT_SIZE, SEGA_COLOR_YELLOW, s1 );
    delayOrButton(4000);
@@ -229,9 +220,9 @@ void ferengiGame( void ) {
 
 #define FRICTION_MED      10   // angry -> happy
 #define FRICTION_MED_LOW   7   // happy -> angry
-#define FRICTION_HIGH     30   // happy -> ecstatic
-#define FRICTION_HIGH_MED 25   // ecstatic -> happy
-#define FRICTION_MAX      35   // cap to keep decay time reasonable
+#define FRICTION_HIGH     35   // happy -> ecstatic
+#define FRICTION_HIGH_MED 30   // ecstatic -> happy
+#define FRICTION_MAX      40   // cap to keep decay time reasonable
 #define SPINNER_DELTA      4
 
    drawExpression( vec_expression, ANGRY );
@@ -290,7 +281,7 @@ void ferengiGame( void ) {
       bool moving = (delta >= SPINNER_DELTA);
       l_angle = angle;
 
-      bool in_right_ear = (angle > SEGA_ANGLE(42) && angle < SEGA_ANGLE(120));
+      bool in_right_ear = (angle > SEGA_ANGLE(42) && angle < SEGA_ANGLE(110));
       bool in_left_ear  = (angle > SEGA_ANGLE(260) && angle < SEGA_ANGLE(323));
 
       bool in_active_ear = (active_ear == 1 && in_right_ear) || (active_ear == 2 && in_left_ear);

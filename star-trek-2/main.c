@@ -99,6 +99,8 @@ void waitVectorRefresh(void) {
    static uint16_t lt = 0;
    while ( system_tick == lt ) { __asm__( "nop" ); }
    lt = system_tick;
+   while ( system_tick == lt ) { __asm__( "nop" ); }
+   lt = system_tick;
 }
 
 
@@ -140,11 +142,6 @@ void say(uint8_t i) {
 
 }
 
-
-// cliché-based mini-game ideas
-// * Rub the Ferengi ear.
-// * Red Shirt guy always dies - like a bishibashi
-// * Scotty fixing dilithium crystal matrix
 
 vector_t* vectors     = NULL;
 vector_t* vec_blank   = NULL;
@@ -656,8 +653,13 @@ static void beginPlay(void) {
 
 static bool drawPlay(void) {
 
-   // resetAnimate();
-   // shirtGame();
+// cliché-based mini-games
+// * Red Shirt guy always dies - like a bishibashi
+// * Rub the Ferengi ear
+// * Fix dilithium crystal matrix
+
+   resetAnimate();
+   shirtGame();
 
    resetAnimate();
    ferengiGame();
