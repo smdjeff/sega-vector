@@ -110,7 +110,14 @@ static void sound_init(void) {
    // so the 8035 can execute it
    SOUND_COMMAND = 0xFF; // assert RAM LOAD latch
    memcpy( (uint8_t*)USB_RAM, usbrom_bin, (1024*4) );
-   SOUND_COMMAND = 0x7F; 
+   SOUND_COMMAND = 0x7F;
+
+   // wait for SLP0250 board to come up (so we don't hear static)
+   uint16_t lt = system_tick;
+   while ( system_tick - lt < SECONDS(4) ) {
+      delay(100);
+   }
+   SPEECH_CONTROL = 0x28; // enable USB+mixer output
 }
 
 
@@ -778,9 +785,8 @@ static void super_loop(void) {
 
 static void init(void) {
 
-   SPEECH_CONTROL = 0x28;
-   // SPEECH_COMMAND = 0x00;
-   // SPEECH_COMMAND = 0x80;
+   SPEECH_CONTROL = 0x00; // disable USB+mixer output
+
    SOUND_COMMAND = 0xFF; // 8035 in reset and assert RAM LOAD latch
 
    // // blank the screen and clear vector ram
@@ -801,12 +807,12 @@ void main(void) {
 
    init();
 
-   sound_init();
-
    initSymbols();
 
    __asm__("ei");
    __asm__("halt");
+
+   sound_init();
 
    for (;;) {
       super_loop();
