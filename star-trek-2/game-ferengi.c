@@ -230,13 +230,13 @@ void ferengiGame( void ) {
    uint8_t cdown;
    uint8_t last_cdown = 0;
    uint16_t ear_interval = 0;
-   uint16_t last_score = 0xffff;
+
 
    while ( (cdown = drawCountdown(0,false)) ) {
 
       waitAnimate(0);
 
-      if ( score != last_score ) { drawScore( score, false ); last_score = score; }
+      drawScore( score, false );
       uint16_t angle = spinner_vector_angle( SPIN_FAST );
 
       if ( cdown != last_cdown ) {

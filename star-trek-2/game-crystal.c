@@ -60,15 +60,12 @@ static const uint8_t DRIFT_STRENGTH[3]  = { 1, 2, 3 };
 // Auto-lock threshold
 #define LOCK_THRESHOLD_XY  15
 
-// 16-direction unit vectors (10-bit angle: 0=up, 256=right, 512=down, 768=left)
-static const int8_t RING_DX[16] = {  0, 4, 8, 8, 8, 8, 8, 4, 0,-4,-8,-8,-8,-8,-8,-4 };
-static const int8_t RING_DY[16] = { -8,-8,-8,-4, 0, 4, 8, 8, 8, 8, 8, 4, 0,-4,-8,-8 };
-
 // Push crystal in the direction of ring_angle
 static void ringPush( uint16_t angle, int16_t* cx, int16_t* cy ) {
-   uint8_t d = (uint8_t)((angle + 32) >> 6) & 0x0F;
-   *cx -= (int16_t)RING_DX[d];
-   *cy += (int16_t)RING_DY[d];
+   int16_t dx, dy;
+   vectorToXY( angle, 8, &dx, &dy );
+   *cx -= dx;
+   *cy -= dy;
 }
 
 void crystalGame( void ) {
@@ -150,9 +147,10 @@ void crystalGame( void ) {
    drawCountdown( 25, false );
 
    uint8_t locked_count = 0;
+   uint8_t cdown = 0;
 
    for ( uint8_t ci = 0; ci < 3; ci++ ) {
-      if ( !drawCountdown(0,true) ) break;
+      if ( !(cdown = drawCountdown(0,true)) ) break;
 
       // --- Show ghost crystal at target slot ---
       memcpy( vec_ghost, vec_c[ci], crystal_bytes[ci] );
@@ -180,7 +178,7 @@ void crystalGame( void ) {
       uint16_t drift_tick = system_tick;
       uint8_t last_color = 0;
 
-      while ( !locked && drawCountdown(0,true) ) {
+      while ( !locked && (cdown = drawCountdown(0,true)) ) {
 
          waitAnimate(0);
          drawScore( score, false );
@@ -249,7 +247,8 @@ void crystalGame( void ) {
             if ( dx < LOCK_THRESHOLD_XY && dy < LOCK_THRESHOLD_XY ) {
                locked = true;
                locked_count++;
-               score += 2 + (ci << 1);
+               score += (2 + (ci << 1)) + cdown;
+               drawScore( score, false );
                SOUND_COMMAND = DOCK;
 
                sym_ghost->visible = false;
@@ -284,12 +283,12 @@ void crystalGame( void ) {
    } // end for each crystal
 
    sym_string1->visible = false;
-   FREE( vec_string1 );
 
    // --- End sequence ---
    if ( locked_count == 3 ) {
       say( POWER_RESTORED );
-      score += 5;
+      score += 5 + cdown;
+      drawScore( score, false );
 
       {
          const char s[] = "matrix stable";
@@ -330,5 +329,6 @@ void crystalGame( void ) {
    FREE( vec_c[2] );
    FREE( vec_ghost );
    FREE( vec_ring_art );
+   FREE( vec_circle_art );
    FREE( vec_laser_art );
 }
