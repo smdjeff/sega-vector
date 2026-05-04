@@ -13,7 +13,7 @@
 * Runs as it would have in 1982 on the original Sega G80 boardsets
 * Runs on a Zilog Z80 at 3.86712 MHz, less than 32KB ROM and 2KB RAM
 * Integrates with the Sega XY vector coprocessor (a two board set of 74k logic)
-* Programmed in C rather than period correct Z80 assembly
+* Programmed bare metal C
 * Loads and works with 8035 CPUs on the sound and speech boards
 * Burn directly to 2716 ROMs and run in the real game
 * Can also run without hardware, just copy over the StarTrek MAME ROMs
