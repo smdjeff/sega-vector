@@ -11,7 +11,7 @@ main.ini
 /tools/1871.speech-u6
 /tools/1670.speech-u7
 **/speech/unused
-**/roms
+#**/roms
 
 **/build/*
 !/**/build/startrek.zip

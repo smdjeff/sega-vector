@@ -79,6 +79,7 @@ roms: build/gamerom.bin | prereq
 	@mkdir -p build/rom
 	@cp build/bootrom.bin roms/1873.cpu-u25
 	@split -d -b 2048 build/gamerom.bin build/rom/
+	@cp build/gamerom.bin roms/gamerom.bin
 	@cp build/rom/01 roms/1848.prom-u1
 	@cp build/rom/02 roms/1849.prom-u2
 	@cp build/rom/03 roms/1850.prom-u3
