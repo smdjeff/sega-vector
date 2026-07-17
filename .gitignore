@@ -10,15 +10,15 @@ main.ini
 /tools/1872.speech-u5
 /tools/1871.speech-u6
 /tools/1670.speech-u7
-/star-trek-2/speech/unused
-/star-trek-2/roms
+**/speech/unused
+**/roms
 
-/star-trek-2/build/*
-!/star-trek-2/build/startrek.zip
-!/star-trek-2/build/art/
-/star-trek-2/build/art/*
-!/star-trek-2/build/art/*.h
-!/star-trek-2/build/speech/
-/star-trek-2/build/speech/*
-!/star-trek-2/build/speech/*.lpc
-!/star-trek-2/build/speech/*.bin
+**/build/*
+!/**/build/startrek.zip
+!/**/build/art/
+/**/build/art/*
+!/**/build/art/*.h
+!/**/build/speech/
+/**/build/speech/*
+!/**/build/speech/*.lpc
+!/**/build/speech/*.bin

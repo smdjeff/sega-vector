@@ -39,7 +39,61 @@ parser.add_argument(      '--origin-left', action='store_true',
                     help='set origin to left-center of artwork (accounts for --rotate and --scale)')
 parser.add_argument(      '--origin-top-left', action='store_true',
                     help='set origin to top-left of artwork; final position is top-right (consistent baseline for font glyphs)')
+parser.add_argument(      '--hw-scale', type=lambda s: int(s, 0), default=0x80,
+                    help='symbol scale byte (0x80=1x) this asset is drawn at in-game; used to simulate '
+                         'the Sega G80 vector generator DDA so emitted vectors compensate for its '
+                         'integer rounding and closed shapes land back on their start pixel')
+parser.add_argument(      '--sintable', default=None,
+                    help='path to this board\'s Sega G80 sine table PROM (e.g. s-c.xyt-u39) to enable '
+                         'hardware DDA compensation (project-specific, so no default); omit to skip it '
+                         'and emit vectors from ideal float coordinates as before (the normal/legacy behavior)')
+parser.add_argument(      '--no-hw-correct', action='store_true',
+                    help='disable hardware DDA compensation even if --sintable is given')
 args = parser.parse_args()
+
+# --- Sega G80 vector generator DDA simulation (bit-exact port of segag80v_v.cpp) ---
+# The real hardware is a dead-reckoning integer accumulator, not a float coordinate
+# system: each vector's dx/dy is derived from an 8-bit sine PROM lookup and a fixed-point
+# accumulator loop, which introduces its own rounding independent of anything we encode.
+# We use this to simulate, after the fact, exactly where a closed shape's outline actually
+# ends up on screen, and patch the single closing vector of each loop to cancel whatever
+# residual gap the hardware's rounding left -- a bounded, one-shot correction (not a live
+# feedback loop chasing the simulated beam vector-by-vector, which turned out to be unstable).
+# Opt-in only: without --sintable, behavior is unchanged from before this feature existed.
+_sintable = None
+if args.sintable and not args.no_hw_correct:
+    with open(args.sintable, 'rb') as f:
+        _sintable = f.read()
+
+
+def hw_vector_delta(sega_angle, sega_size, scale=None):
+    """Bit-exact replica of the segag80v vector generator's DDA for one already-quantized
+    (angle, size) hardware vector. Returns the integer (dx, dy) the real chip would draw."""
+    if scale is None:
+        scale = args.hw_scale
+    a = sega_angle & 0x3FF
+    length = (sega_size * scale) >> 7
+    ax = a & 0x1ff
+    deltax = _sintable[(ax << 1) & 0x3ff]
+    ay = (a + 0x100) & 0x1ff
+    deltay = _sintable[(ay << 1) & 0x3ff]
+    incx = deltax + (deltax >> 7)
+    incy = deltay + (deltay >> 7)
+    negx = (a & 0x200) != 0
+    negy = ((a + 0x100) & 0x200) != 0
+    xaccum = yaccum = 0
+    dx = dy = 0
+    for _ in range(length):
+        xaccum += incx
+        step = xaccum >> 8
+        dx += -step if negx else step
+        xaccum &= 0xff
+
+        yaccum += incy
+        step = yaccum >> 8
+        dy += -step if negy else step
+        yaccum &= 0xff
+    return dx, dy
 
 # Used to detect breaks between subpaths.
 JOIN_EPS2 = 1e-12
@@ -137,7 +191,7 @@ def calculate_angle_distance(x0, y0, x1, y1):
         angle += 360
     if angle > 360:
         angle -= 360
-    return round(distance), round(angle)
+    return round(distance), angle
 
 
 def parse_transform(transform_str):
@@ -289,21 +343,67 @@ def draw_dashed_line(t, x0, y0, x1, y1, dash=8.0, gap=6.0):
         pos = b + gap
 
 sega_vector_count = 0
+emitted_vectors = []  # (color, size, angle) tuples, in emission order; printed at the very end
 
 def printSegaVector(sega_color, x0, y0, x1, y1):
+    global sega_vector_count
     distance, angle = calculate_angle_distance(x0, y0, x1, y1)
+    chunks = 0
     while distance > 0:
+        chunks += 1
+        if chunks > 256:
+            raise RuntimeError(
+                f"printSegaVector: {chunks} chunks and still {distance} remaining "
+                f"(from ({x0:.1f},{y0:.1f}) to ({x1:.1f},{y1:.1f})) -- "
+                f"runaway loop, aborting instead of hanging")
         sega_size = min(distance, 0xFF)
         distance -= sega_size
-        sega_angle = int(angle * 1024 / 360)
-        sega_angle_lsb = sega_angle & 0xFF
-        sega_angle_msb = (sega_angle >> 8) & 0xFF
-        print("   0x{0:02x}, 0x{1:02x}, 0x{2:02x}, 0x{3:02x},".format(
-            sega_color if distance == 0 else (sega_color & 0x7F),
-            sega_size, sega_angle_lsb, sega_angle_msb
-        ))
-        global sega_vector_count
+        sega_angle = round(angle * 1024 / 360) % 1024
+        color = sega_color if distance == 0 else (sega_color & 0x7F)
+        emitted_vectors.append([color, sega_size, sega_angle])
         sega_vector_count += 1
+
+
+def flush_emitted_vectors():
+    for color, size, angle in emitted_vectors:
+        lsb = angle & 0xFF
+        msb = (angle >> 8) & 0xFF
+        print("   0x{0:02x}, 0x{1:02x}, 0x{2:02x}, 0x{3:02x},".format(color, size, lsb, msb))
+
+
+def apply_hw_closure_correction(start, end, scale):
+    """Patch the last vector in emitted_vectors[start:end+1] (a closed stroke's hardware-drawn
+    outline) so the simulated chip position returns exactly to where it started. Searches a
+    bounded neighborhood around the original closing vector's (angle, size) for the best match --
+    always terminates, never touches anything outside [start, end]."""
+    if _sintable is None or end <= start:
+        return
+    dx_total = dy_total = 0
+    for color, size, angle in emitted_vectors[start:end]:
+        dx, dy = hw_vector_delta(angle, size, scale)
+        dx_total += dx
+        dy_total += dy
+    orig_color, orig_size, orig_angle = emitted_vectors[end]
+    orig_dx, orig_dy = hw_vector_delta(orig_angle, orig_size, scale)
+    want_dx = orig_dx - (dx_total + orig_dx)
+    want_dy = orig_dy - (dy_total + orig_dy)
+
+    best = (orig_angle, orig_size)
+    best_err = abs(orig_dx - want_dx) + abs(orig_dy - want_dy)
+    size_lo = max(0, orig_size - 32)
+    size_hi = min(0xFF, orig_size + 32)
+    for angle in range(1024):
+        for size in range(size_lo, size_hi + 1):
+            dx, dy = hw_vector_delta(angle, size, scale)
+            err = abs(dx - want_dx) + abs(dy - want_dy)
+            if err < best_err:
+                best_err = err
+                best = (angle, size)
+                if err == 0:
+                    break
+        if best_err == 0:
+            break
+    emitted_vectors[end] = [orig_color, best[1], best[0]]
 
 
 def dist2(a, b):
@@ -692,12 +792,16 @@ skk.pendown()
 
 x3, y3 = 0.0, 0.0  # start at origin after centering
 stall_pending = not args.no_stall
+closed_stroke_ranges = []  # (start_idx, end_idx) into emitted_vectors, inclusive, for closed loops
+
+CLOSE_EPS2 = 1e-6
 
 # Draw + emit Sega vectors in optimized order
 for st in stitched:
     pts = st["pts"]
     color = st["rgb"]
     sega_color = st["sega_color"]
+    is_closed = dist2(pts[0], pts[-1]) <= CLOSE_EPS2 and len(pts) > 2
 
     # Teleport (beam-off) to stroke start if needed
     wn.tracer(0, 0)
@@ -715,8 +819,7 @@ for st in stitched:
         # keep sega vector stream in sync with turtle position
         x3, y3 = sx, sy
     if stall_pending:
-        print("   0x{:02x}, 0x{:02x}, 0x{:02x}, 0x{:02x},".format(
-            sega_color, 0, 0, 0))
+        emitted_vectors.append([sega_color, 0, 0])
         sega_vector_count += 1
         stall_pending = False
     if (args.speed): wn.tracer(1, args.speed)
@@ -724,11 +827,18 @@ for st in stitched:
     # Draw polyline (beam-on for each segment)
     skk.pencolor(color)
     skk.goto(sx, sy)
+    stroke_start_idx = len(emitted_vectors)
     for (nx, ny) in pts[1:]:
         skk.goto(nx, ny)
         printSegaVector(sega_color | 0x01, x3, y3, nx, ny)
         x3, y3 = nx, ny
     wn.update()
+    if is_closed and len(emitted_vectors) > stroke_start_idx:
+        closed_stroke_ranges.append((stroke_start_idx, len(emitted_vectors) - 1))
+
+if _sintable is not None:
+    for start, end in closed_stroke_ranges:
+        apply_hw_closure_correction(start, end, args.hw_scale)
 
 base = os.path.basename(args.filename)
 name = os.path.splitext(base)[0]
@@ -742,6 +852,7 @@ else:
     final_x = 0.0
     final_y = 0.0
 printSegaVector(sega_color | 0x80, x3, y3, final_x, final_y)
+flush_emitted_vectors()
 print(f'#define V_{macro}_SZ {sega_vector_count}')
 
 doc.unlink()
