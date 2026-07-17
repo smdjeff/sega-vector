@@ -4,8 +4,9 @@
 
 ![screenshot](screenshot.jpg)
 
-
 <img width="1024" height="784" alt="d83903ea-9b9d-4792-8f75-6c012129067f" src="https://github.com/user-attachments/assets/3a38c815-9b57-4bb4-9bcb-b116a0df5da0" />
+
+![screenshot](screenshot3.jpg)
 
 
 * Follow the development progress on [YouTube shorts](https://youtube.com/playlist?list=PL5WwuS3ViybqfLWkKmgaT5_N2kVawZYZk)
