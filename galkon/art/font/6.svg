@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="40px" height="70px" viewBox="0 0 40 70" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>6</title>
+    <desc>Minimal 7-segment digit</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="6" stroke="#00FFFF">
+            <path id="a" d="M5,5 L35,5"></path>
+            <path id="f" d="M5,5 L5,35"></path>
+            <path id="g" d="M5,35 L35,35"></path>
+            <path id="e" d="M5,35 L5,65"></path>
+            <path id="c" d="M35,35 L35,65"></path>
+            <path id="d" d="M5,65 L35,65"></path>
+        </g>
+    </g>
+</svg>
