@@ -1,5 +1,7 @@
 # Galkon
 
+![Screenshot](../screenshot3.jpg)
+
 # A new game written for a vintage Sega 1982 vector arcade machine
 
 # Installation
