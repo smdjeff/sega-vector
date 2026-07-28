@@ -1,4 +1,7 @@
-# sega-g80-vector Star Trek 2
+# Star Trek 2
+
+<img width="1232" height="1510" alt="screenshot" src="https://github.com/user-attachments/assets/d1ac33f2-8f9a-4d01-8f45-8badfa34a3cb" />
+
 
 # A new game written for a vintage Sega 1982 vector arcade machine
 
