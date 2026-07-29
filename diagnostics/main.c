@@ -288,6 +288,7 @@ typedef enum {
    WARP_SUCK_END = 0x2F,
    SAUCER_EXIT = 0x19,
    SAUCER_EXIT_END = 0x2F,
+   GAME_OVER = 0x20,
    STARBASE_EXPLOSION = 0x22,
    SMALL_BONUS = 0x24,
    LARGE_BONUS = 0x25,
@@ -302,6 +303,8 @@ typedef enum {
    NOMAD_MOTION_END = 0x21,
    NOMAD_STOPPED = 0x2D,
    NOMAD_STOPPED_END = 0x21,
+   BACKGROUND_ENGINE = 0x30,
+   BACKGROUND_ENGINE_END = 0x31,
 } sound_t;
 
 const uint8_t sounds[] = {
@@ -309,7 +312,7 @@ const uint8_t sounds[] = {
    IMPULSE_END,          // 0x05
    WARP,                 // 0x06
    WARP_END,             // 0x07
-   RED_ALERT,            // 0x0C
+   RED_ALERT,            // 0x0C and 0x3E
    RED_ALERT_END,        // 0x0D
    PHASER,               // 0x08
    PHOTON,               // 0x0A
@@ -326,6 +329,7 @@ const uint8_t sounds[] = {
    WARP_SUCK_END,        // 0x2F
    SAUCER_EXIT,          // 0x19
    SAUCER_EXIT_END,      // 0x2F
+   GAME_OVER,            // 0x20
    STARBASE_EXPLOSION,   // 0x22
    SMALL_BONUS,          // 0x24
    LARGE_BONUS,          // 0x25
@@ -340,6 +344,8 @@ const uint8_t sounds[] = {
    NOMAD_MOTION_END,     // 0x21
    NOMAD_STOPPED,        // 0x2D
    NOMAD_STOPPED_END,    // 0x21
+   BACKGROUND_ENGINE,    // 0x30 and 0x32 and 0x36
+   BACKGROUND_ENGINE_END // 0x31
 };
 
 
