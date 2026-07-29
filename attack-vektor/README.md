@@ -1,6 +1,6 @@
-# Galkon
+# Attack Vektor
 
-![Screenshot](../screenshot3.jpg)
+![Screenshot](../screenshot.jpg)
 
 # A new game written for a vintage Sega 1982 vector arcade machine
 
